@@ -1,6 +1,6 @@
 # From The Ashes: native Linux client
 
-A native Linux client (no Wine) for **From The Ashes**, the World of Warcraft 3.3.5a (build 12340) server.
+A native Linux client (no Wine) for **From The Ashes**, an AzerothCore repack.
 It installs into your existing From The Ashes client folder, reuses that folder's game data, and leaves the
 Windows client untouched. It renders through dxvk-native (Direct3D 9 on Vulkan) with SDL3 for the window,
 input and audio, and includes the WarcraftXL features From The Ashes uses: modern models and textures,
