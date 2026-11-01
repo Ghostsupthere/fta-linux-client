@@ -157,7 +157,7 @@ from the client's own shaders; they ship in release files, not in this repositor
 - **From The Ashes** was created, and is maintained, by **Dinkledork**. This client exists for that server.
 - The client is built on **wowdecomp**, the C++ reconstruction of the 3.3.5a client by
   **[Saty](https://github.com/SatyPardus/wowdecomp)**, **[STRHercules](https://github.com/STRHercules/wowdecomp)** and
-  **RosemynH**, and the contributors to their forks.
+  **[RosemyneH](https://github.com/RosemyneH/wowdecomp)**, and the contributors to their forks.
 - [dxvk](https://github.com/doitsujin/dxvk) and SDL3, which it renders and runs through.
 - **The World of Warcraft community**: the modders, server developers, tool authors and players whose years of work
   make projects like this possible. Thank you.
