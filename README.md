@@ -6,8 +6,11 @@ Windows client untouched. It renders through dxvk-native (Direct3D 9 on Vulkan) 
 input and audio, and includes the WarcraftXL features From The Ashes uses: modern models and textures,
 collection armor, the improved world renderer and the extra interface tools.
 
-This repository holds the installer and launcher. The client itself is built from a separate source tree (a C++
-reconstruction of the 3.3.5a client) and published here as release files.
+This repository holds the installer and launcher, and the **[Releases](https://github.com/Ghostsupthere/fta-linux-client/releases/latest)**
+page has the downloads. The client's **source code** is in
+**[fta-wd-ix-linux-native](https://github.com/Ghostsupthere/fta-wd-ix-linux-native)** (a C++ reconstruction of the 3.3.5a
+client with the Linux platform layer and the WarcraftXL ports); the feature-by-feature status is in its
+[docs/WXL-NATIVE-PORT.md](https://github.com/Ghostsupthere/fta-wd-ix-linux-native/blob/main/docs/WXL-NATIVE-PORT.md).
 
 > The client is not at proven parity with the Windows client. Some features are confirmed in game, others are
 > implemented but not yet checked, and a few are off by default. Report problems with the crash file from
@@ -131,7 +134,7 @@ in `Utils/WarcraftXL/visuals/` are harmless to keep.
 
 ## Releasing (maintainers)
 
-The binary parts are built in the source tree and packaged here:
+The binary parts are built in the [source tree](https://github.com/Ghostsupthere/fta-wd-ix-linux-native) and packaged here:
 
 ```
 # in the source tree, after building bin/Linux/Wow64:
