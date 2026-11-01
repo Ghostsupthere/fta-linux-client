@@ -122,6 +122,11 @@ environment variable of the same name, which wins. Missing keys use built-in def
   `fta-linux-install`. Run `install.sh`, then use `./FTA-Linux/play.sh` in the client folder.
 - **"the installer file is damaged"**: the download or copy is incomplete. Download it again and compare
   `sha256sum` with `FTA-Linux-SHA256SUMS.txt`.
+- **Anything wrong with an install or update**: the installer keeps a log at `Logs/fta-linux-install.log` in your
+  client folder (it appends one section per run, and prints the path at the end). It records the folder it chose and
+  the checksum of `Wow64` before and after, so it shows whether the right client folder was updated. Attach it when
+  reporting. If the run stopped before a folder was chosen, the log is `~/.local/state/fta-linux-client/install.log`.
+  `sha256sum Wow64` in the client folder should match the one in the log's "installed Wow64" line.
 - **Missing libraries**: run `FTA-Linux/install-deps.sh` (see the distribution notes).
 - **A crash**: the report is in `Errors/` and the launch log in `Logs/native-launch-*.log`, both in your client
   folder. Attach both when reporting.
