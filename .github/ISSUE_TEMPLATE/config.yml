@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and chat
+    url: https://discord.gg/DsZMGUD8aT
+    about: For general help, ideas and showing off what you build, use the Discord.
+  - name: Troubleshooting guide
+    url: https://github.com/Ghostsupthere/fta-linux-client#troubleshooting
+    about: Common install and launch problems are answered in the README.

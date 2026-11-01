@@ -1,0 +1,100 @@
+name: Bug report
+description: Something fails to install, start, log in, render or crashes
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. A good report lets me reproduce the problem, so the details below matter.
+        Please check the [troubleshooting section](https://github.com/Ghostsupthere/fta-linux-client#troubleshooting) and search existing issues first.
+
+        **Privacy:** the crash report (`Errors/*Crash.txt`) and the launch log (`Logs/native-launch-*.log`) contain your Linux
+        username, computer name and the realm address. Edit those out if you do not want them public.
+        Do not attach game data, passwords or account details.
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where did it go wrong?
+      options:
+        - Installing (install.sh or the one-click installer)
+        - Installing system libraries (install-deps.sh)
+        - Starting the game (play.sh)
+        - Login or character select
+        - In the world (rendering, models, armor, UI)
+        - A crash
+        - Performance
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      placeholder: "Describe it. Screenshots help."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: false
+  - type: input
+    id: distro
+    attributes:
+      label: Linux distribution and version
+      placeholder: "e.g. CachyOS, Ubuntu 24.04, Fedora 42"
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU and driver
+      placeholder: "e.g. NVIDIA RTX 4070 Ti, driver 615.78 / AMD RX 6700 XT, Mesa 26.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: session
+    attributes:
+      label: Desktop session
+      options:
+        - Wayland
+        - X11
+        - Not sure
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Client version
+      description: "Output of `cat FTA-Linux/VERSION.txt` in your client folder, or the release name you installed."
+      placeholder: "commit: 1be006a ..."
+    validations:
+      required: true
+  - type: textarea
+    id: check
+    attributes:
+      label: Output of `./FTA-Linux/play.sh --check`
+      description: Run it in your client folder and paste the result.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and crash report
+      description: "Paste or attach the newest `Errors/*Crash.txt` and `Logs/native-launch-*.log` from your client folder (see the privacy note above)."
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and the troubleshooting section
+          required: true
+        - label: I am not attaching game files, passwords or account details
+          required: true
