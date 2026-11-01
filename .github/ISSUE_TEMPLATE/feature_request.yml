@@ -1,0 +1,18 @@
+name: Feature request
+description: Suggest an improvement or a missing feature
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to see?
+      description: "What problem does it solve? If it exists in the Windows client, say what it does there."
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: "Screenshots, links, or alternatives you considered."
+    validations:
+      required: false
