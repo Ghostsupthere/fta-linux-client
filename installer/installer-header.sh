@@ -16,7 +16,9 @@ set -euo pipefail
 PAYLOAD_SHA256=@PAYLOAD_SHA256@
 
 self=$(readlink -f -- "$0")
+ORIGINAL_ARGS="$*"
 client="" assume=0 shortcut=1 interm=0 pause=0
+out_tty=0; [[ -t 1 ]] && out_tty=1   # the log below replaces stdout, so ask now
 while (( $# )); do
     case $1 in
         --client) client=${2:?--client needs a folder}; shift ;;
@@ -48,14 +50,51 @@ if (( ! interm )) && [[ ! -t 0 || ! -t 1 ]]; then
     # No terminal emulator found: carry on with dialogs only.
 fi
 
+# ---- install log ----------------------------------------------------------------------------------
+# Everything printed from here on is also kept in a log: Logs/fta-linux-install.log in the client folder (appended
+# on every run), or ~/.local/state/fta-linux-client/install.log if the run ends before a client folder is chosen.
+tmplog=$(mktemp)
+exec 3>&1
+exec > >(tee -a -- "$tmplog") 2>&1
+log_saved=0
+finish_log() {
+    (( log_saved )) && return 0
+    log_saved=1
+    sleep 0.3   # let the tee process write the last lines
+    local dest
+    if [[ -n $client && -d $client ]]; then
+        dest=$client/Logs/fta-linux-install.log
+    else
+        dest=${XDG_STATE_HOME:-$HOME/.local/state}/fta-linux-client/install.log
+    fi
+    if mkdir -p -- "$(dirname -- "$dest")" 2>/dev/null && cat -- "$tmplog" >>"$dest" 2>/dev/null; then
+        printf '\nInstall log: %s\n(attach this file when reporting an install problem)\n' "$dest" >&3
+    else
+        printf '\nCould not save the install log; it is at %s\n' "$tmplog" >&3
+        return 0
+    fi
+    rm -f -- "$tmplog"
+}
+hash_of() { if [[ -f $1 ]] && command -v sha256sum >/dev/null 2>&1; then sha256sum -- "$1" | cut -d' ' -f1; else echo 'none'; fi; }
+
+printf '\n######## FTA Linux installer log: %s ########\n' "$(date '+%Y-%m-%d %H:%M:%S %z')"
+printf 'installer file: %s\n' "$self"
+printf 'installer sha256: %s\n' "$(hash_of "$self")"
+printf 'payload sha256 (expected): %s\n' "$PAYLOAD_SHA256"
+printf 'arguments: %s\n' "${ORIGINAL_ARGS:-(none)}"
+printf 'working folder: %s\n' "$PWD"
+printf 'system: %s | %s | session %s\n' "$(uname -srm)" \
+    "$(. /etc/os-release 2>/dev/null && printf %s "${PRETTY_NAME:-unknown}" || echo unknown)" "${XDG_SESSION_TYPE:-unknown}"
+
 pause_and_exit() {
     local code=$1
+    finish_log
     if (( pause )); then read -r -p 'Press Enter to close this window. ' _ || true; fi
     exit "$code"
 }
 fail() {
     printf '\nInstall failed: %s\n' "$*" >&2
-    if [[ ! -t 1 ]] && command -v zenity >/dev/null 2>&1; then zenity --error --text="$*" 2>/dev/null || true; fi
+    if (( ! out_tty )) && command -v zenity >/dev/null 2>&1; then zenity --error --text="$*" 2>/dev/null || true; fi
     pause_and_exit 1
 }
 ask() { # ask "question" default(Y|N): returns 0 for yes
@@ -87,9 +126,9 @@ else
 fi
 if (( ${#candidates[@]} == 0 )); then
     picked=""
-    if [[ ! -t 1 ]] && command -v zenity >/dev/null 2>&1; then
+    if (( ! out_tty )) && command -v zenity >/dev/null 2>&1; then
         picked=$(zenity --file-selection --directory --title='Select your From The Ashes client folder (with Wow.exe)' 2>/dev/null || true)
-    elif [[ ! -t 1 ]] && command -v kdialog >/dev/null 2>&1; then
+    elif (( ! out_tty )) && command -v kdialog >/dev/null 2>&1; then
         picked=$(kdialog --getexistingdirectory "$HOME" --title 'Select your From The Ashes client folder' 2>/dev/null || true)
     elif (( ! assume )) && [[ -t 0 ]]; then
         read -r -e -p 'Could not find it. Type or paste the path of your client folder (the one with Wow.exe): ' picked || true
@@ -115,7 +154,11 @@ fi
 
 # ---- unpack and install -------------------------------------------------------------------------
 tmp=$(mktemp -d)
-trap 'rm -rf -- "$tmp"' EXIT
+trap 'finish_log; rm -rf -- "$tmp"' EXIT
+printf 'chosen client folder: %s\n' "$client"
+printf 'folder check: Data %s, Interface %s, Wow.exe %s, existing Wow64 sha256 %s\n' \
+    "$([[ -d $client/Data ]] && echo yes || echo NO)" "$([[ -d $client/Interface ]] && echo yes || echo NO)" \
+    "$([[ -f $client/Wow.exe ]] && echo yes || echo no)" "$(hash_of "$client/Wow64")"
 offset=$(LC_ALL=C awk '/^__PAYLOAD__$/ { print NR + 1; exit }' "$self")
 [[ -n $offset ]] || fail 'this installer file is damaged (no payload). Download it again.'
 if command -v sha256sum >/dev/null 2>&1 && [[ $PAYLOAD_SHA256 != @* ]]; then
@@ -127,7 +170,10 @@ if command -v sha256sum >/dev/null 2>&1 && [[ $PAYLOAD_SHA256 != @* ]]; then
 fi
 printf 'Unpacking...\n'
 tail -n +"$offset" "$self" | tar -xz -C "$tmp"
+printf 'payload Wow64 sha256: %s\n' "$(hash_of "$tmp/payload/Wow64")"
 "$tmp/install.sh" "$client" --no-deps || fail 'the installer could not copy the files (see above)'
+printf 'installed Wow64 sha256: %s\n' "$(hash_of "$client/Wow64")"
+[[ $(hash_of "$client/Wow64") == "$(hash_of "$tmp/payload/Wow64")" ]] || fail 'the installed Wow64 does not match the one in the installer (the file may be in use; close the game and run the installer again)'
 
 # ---- system libraries ----------------------------------------------------------------------------
 printf '\nChecking system libraries...\n'

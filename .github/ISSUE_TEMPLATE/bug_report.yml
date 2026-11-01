@@ -8,7 +8,7 @@ body:
         Thanks for reporting. A good report lets me reproduce the problem, so the details below matter.
         Please check the [troubleshooting section](https://github.com/Ghostsupthere/fta-linux-client#troubleshooting) and search existing issues first.
 
-        **Privacy:** the crash report (`Errors/*Crash.txt`) and the launch log (`Logs/native-launch-*.log`) contain your Linux
+        **Privacy:** the crash report (`Errors/*Crash.txt`) and the launch log (`Logs/native-launch-*.log`) and the install log (`Logs/fta-linux-install.log`) contain your Linux
         username, computer name and the realm address. Edit those out if you do not want them public.
         Do not attach game data, passwords or account details.
   - type: dropdown
@@ -86,7 +86,7 @@ body:
     id: logs
     attributes:
       label: Logs and crash report
-      description: "Paste or attach the newest `Errors/*Crash.txt` and `Logs/native-launch-*.log` from your client folder (see the privacy note above)."
+      description: "Paste or attach the newest `Errors/*Crash.txt` and `Logs/native-launch-*.log` from your client folder, and for an install or update problem `Logs/fta-linux-install.log` (see the privacy note above)."
     validations:
       required: false
   - type: checkboxes
