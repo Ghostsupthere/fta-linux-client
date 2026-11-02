@@ -223,7 +223,7 @@ fixes_backup() { # fixes_backup RELPATH: keeps the current file before it change
 }
 fixes_apply() {
     local rel orig fixed patchf target cur applied=0 same=0 skipped=0 patchfile
-    while IFS=$'\t' read -r rel orig fixed patchf; do
+    while IFS=$'\t' read -r rel orig fixed patchf _; do
         [[ -z $rel || $rel == \#* ]] && continue
         case $rel in
             Interface/AddOns/*) ;;
@@ -274,9 +274,13 @@ fixes_apply() {
 if (( use_fixes )); then
     if fixes_find; then
         printf '\nFound addon fixes: %s\n' "$fixes_origin"
-        [[ -f $fixes_dir/README.txt ]] && sed -n '1,12p' "$fixes_dir/README.txt" | sed 's/^/  /'
         printf 'It changes these files in your client folder:\n'
-        cut -f1 "$fixes_dir/fixes.manifest" | grep -v '^#' | sed 's/^/  /'
+        while IFS=$'\t' read -r rel _ _ _ note; do
+            [[ -z $rel || $rel == \#* ]] && continue
+            printf '  %s\n' "$rel"
+            [[ -z ${note:-} ]] || printf '    %s\n' "$note"
+        done <"$fixes_dir/fixes.manifest"
+        [[ ! -f $fixes_dir/README.txt ]] || printf '(details: README.txt inside %s)\n' "$fixes_origin"
         if ask 'Apply these addon fixes?' Y; then
             fixes_apply || printf 'Addon fixes could not be applied (the install itself is fine).\n'
         else
