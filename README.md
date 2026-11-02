@@ -156,10 +156,11 @@ gh release create vX.Y --repo OWNER/fta-linux-client dist/FTA-Linux-Installer.ru
 ```
 
 The optional addon-fixes side file is built from two copies of the changed addon files (originals and fixed),
-each holding `Interface/AddOns/...`:
+each holding `Interface/AddOns/...`. SUMMARY_FILE has one `path<TAB>description` line per file; the installer
+shows these when it asks:
 
 ```
-tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR dist README_FILE      # writes dist/FTA-Addon-Fixes/ and .tar.gz
+tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR dist README_FILE SUMMARY_FILE   # writes dist/FTA-Addon-Fixes/ and .tar.gz
 gh release upload vX.Y --repo OWNER/fta-linux-client dist/FTA-Addon-Fixes.tar.gz
 ```
 

@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
 # Build the optional addon-fixes side payload that the installer applies when it finds it next to itself.
 #
-#   tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR [OUT_DIR] [README_FILE]
+#   tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR [OUT_DIR] [README_FILE] [SUMMARY_FILE]
 #
 # BEFORE_DIR and AFTER_DIR are two copies of the client's folder tree holding only Interface/AddOns/... files:
 # the originals and the fixed versions. Every file that differs becomes a manifest entry, a patch and a drop-in
 # copy. New files are not supported (the installer only fixes files the client already has).
+# SUMMARY_FILE (optional) has one line per file: "<relative path><TAB><one-line description>"; the installer
+# shows it when it asks.
 # Output (OUT_DIR, default ./dist): FTA-Addon-Fixes/ (the folder) and FTA-Addon-Fixes.tar.gz.
 set -euo pipefail
 
-before=${1:?usage: tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR [OUT_DIR] [README_FILE]}
-after=${2:?usage: tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR [OUT_DIR] [README_FILE]}
+before=${1:?usage: tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR [OUT_DIR] [README_FILE] [SUMMARY_FILE]}
+after=${2:?usage: tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR [OUT_DIR] [README_FILE] [SUMMARY_FILE]}
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 out=${3:-$repo/dist}
 readme=${4:-}
+summaries=${5:-}
 fail() { printf 'make-addon-fixes: %s\n' "$*" >&2; exit 1; }
 [[ -d $before/Interface/AddOns && -d $after/Interface/AddOns ]] || fail 'both trees need an Interface/AddOns folder'
 mkdir -p -- "$out"
@@ -21,7 +24,7 @@ out=$(cd -- "$out" && pwd -P)
 dest=$out/FTA-Addon-Fixes
 rm -rf -- "${dest:?}"
 mkdir -p -- "$dest/patches"
-printf '# relative path\toriginal sha256\tfixed sha256\tpatch\n' >"$dest/fixes.manifest"
+printf '# relative path\toriginal sha256\tfixed sha256\tpatch\tsummary\n' >"$dest/fixes.manifest"
 
 n=0
 while IFS= read -r -d '' file; do
@@ -34,8 +37,10 @@ while IFS= read -r -d '' file; do
     diff -u --label "a/$rel" --label "b/$rel" -- "$before/$rel" "$after/$rel" >"$dest/patches/$patch" || [[ $? -eq 1 ]]
     mkdir -p -- "$dest/$(dirname -- "$rel")"
     cp -- "$after/$rel" "$dest/$rel"
-    printf '%s\t%s\t%s\t%s\n' "$rel" "$(sha256sum -- "$before/$rel" | cut -d' ' -f1)" \
-        "$(sha256sum -- "$after/$rel" | cut -d' ' -f1)" "$patch" >>"$dest/fixes.manifest"
+    note=""
+    [[ -z $summaries ]] || note=$(awk -F'\t' -v r="$rel" '$1 == r { print $2; exit }' "$summaries")
+    printf '%s\t%s\t%s\t%s\t%s\n' "$rel" "$(sha256sum -- "$before/$rel" | cut -d' ' -f1)" \
+        "$(sha256sum -- "$after/$rel" | cut -d' ' -f1)" "$patch" "$note" >>"$dest/fixes.manifest"
 done < <(find "$after/Interface/AddOns" -type f -print0 | sort -z)
 (( n )) || fail 'no differing files found'
 
