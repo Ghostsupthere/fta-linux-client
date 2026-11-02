@@ -5,28 +5,33 @@
 #
 # It finds your From The Ashes client folder (the one with Wow.exe), installs the Linux client into it,
 # offers to install the system libraries it needs, adds a menu shortcut and offers to start the game.
-# Nothing the Windows client uses is changed.
+# Nothing the Windows client uses is changed, except addon fixes if you provide them (a FTA-Addon-Fixes folder
+# next to this file; it asks first and keeps backups).
 #
 #   --client DIR     use this client folder instead of looking for one
 #   --yes            answer the questions with their defaults (installs missing libraries with sudo);
 #                    only installs into --client DIR or the folder you run it from
 #   --no-shortcut    do not add the menu shortcut
+#   --fixes PATH     apply this addon-fixes folder (or .tar.gz) instead of looking for one next to the installer
+#   --no-fixes       do not look for or apply addon fixes
 set -euo pipefail
 
 PAYLOAD_SHA256=@PAYLOAD_SHA256@
 
 self=$(readlink -f -- "$0")
 ORIGINAL_ARGS="$*"
-client="" assume=0 shortcut=1 interm=0 pause=0
+client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1
 out_tty=0; [[ -t 1 ]] && out_tty=1   # the log below replaces stdout, so ask now
 while (( $# )); do
     case $1 in
         --client) client=${2:?--client needs a folder}; shift ;;
         --yes|-y) assume=1 ;;
         --no-shortcut) shortcut=0 ;;
+        --fixes) fixes_path=${2:?--fixes needs a folder or .tar.gz}; shift ;;
+        --no-fixes) use_fixes=0 ;;
         --in-terminal) interm=1 ;;
         --pause) pause=1 ;;
-        --help|-h) sed -n '2,14p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --help|-h) sed -n '2,16p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
     esac
     shift
@@ -37,6 +42,8 @@ if (( ! interm )) && [[ ! -t 0 || ! -t 1 ]]; then
     relaunch=("$self" --in-terminal --pause)
     (( assume )) && relaunch+=(--yes)
     (( ! shortcut )) && relaunch+=(--no-shortcut)
+    (( ! use_fixes )) && relaunch+=(--no-fixes)
+    [[ -n $fixes_path ]] && relaunch+=(--fixes "$fixes_path")
     [[ -n $client ]] && relaunch+=(--client "$client")
     for term in x-terminal-emulator gnome-terminal ptyxis konsole xfce4-terminal mate-terminal lxterminal tilix kitty alacritty foot xterm; do
         command -v "$term" >/dev/null 2>&1 || continue
@@ -174,6 +181,113 @@ printf 'payload Wow64 sha256: %s\n' "$(hash_of "$tmp/payload/Wow64")"
 "$tmp/install.sh" "$client" --no-deps || fail 'the installer could not copy the files (see above)'
 printf 'installed Wow64 sha256: %s\n' "$(hash_of "$client/Wow64")"
 [[ $(hash_of "$client/Wow64") == "$(hash_of "$tmp/payload/Wow64")" ]] || fail 'the installed Wow64 does not match the one in the installer (the file may be in use; close the game and run the installer again)'
+
+# ---- optional addon fixes ------------------------------------------------------------------------
+# A side payload, the folder FTA-Addon-Fixes (or FTA-Addon-Fixes*.tar.gz), is picked up when it sits next to this
+# installer, in the folder it was started from, or in the client folder. It holds small fixes for addons in the
+# base client (see its README.txt). Each file is changed only if it is the version the fix was made for, or if
+# the patch still applies cleanly; the originals are kept in FTA-Linux/addon-fix-backup/. Nothing here can
+# make the install fail.
+fixes_dir=""
+fixes_origin=""
+fixes_resolve() { # fixes_resolve PATH: sets fixes_dir if PATH is a usable fixes folder or archive
+    local p=$1 x
+    if [[ -d $p && -f $p/fixes.manifest ]]; then fixes_dir=$p; return 0; fi
+    if [[ -f $p && $p == *.tar.gz ]]; then
+        x=$(mktemp -d -p "$tmp") || return 1
+        if tar -xzf "$p" -C "$x" 2>/dev/null; then
+            local m
+            m=$(find "$x" -maxdepth 2 -name fixes.manifest -type f | head -n 1)
+            if [[ -n $m ]]; then fixes_dir=$(dirname -- "$m"); return 0; fi
+        fi
+    fi
+    return 1
+}
+fixes_find() {
+    [[ -n $fixes_path ]] && { fixes_resolve "$fixes_path" && fixes_origin=$fixes_path; return; }
+    local d seen="" hit
+    for d in "$(dirname -- "$self")" "$PWD" "$client"; do
+        d=$(cd -- "$d" 2>/dev/null && pwd -P) || continue
+        [[ $seen == *"|$d|"* ]] && continue
+        seen+="|$d|"
+        while IFS= read -r hit; do
+            if fixes_resolve "$hit"; then fixes_origin=$hit; return 0; fi
+        done < <(find "$d" -maxdepth 1 -name 'FTA-Addon-Fixes*' \( -type d -o -name '*.tar.gz' \) 2>/dev/null | sort -rV)
+    done
+    return 1
+}
+fixes_backup_dir=""
+fixes_backup() { # fixes_backup RELPATH: keeps the current file before it changes
+    [[ -n $fixes_backup_dir ]] || fixes_backup_dir=$client/FTA-Linux/addon-fix-backup/$(date +%Y%m%d-%H%M%S)
+    mkdir -p -- "$fixes_backup_dir/$(dirname -- "$1")" && cp -p -- "$client/$1" "$fixes_backup_dir/$1"
+}
+fixes_apply() {
+    local rel orig fixed patchf target cur applied=0 same=0 skipped=0 patchfile
+    while IFS=$'\t' read -r rel orig fixed patchf; do
+        [[ -z $rel || $rel == \#* ]] && continue
+        case $rel in
+            Interface/AddOns/*) ;;
+            *) printf '  skipped %s (only files under Interface/AddOns are accepted)\n' "$rel"; skipped=$((skipped + 1)); continue ;;
+        esac
+        if [[ $rel == *..* || $patchf == */* ]]; then
+            printf '  skipped %s (unsafe path)\n' "$rel"; skipped=$((skipped + 1)); continue
+        fi
+        target=$client/$rel
+        patchfile=$fixes_dir/patches/$patchf
+        if [[ ! -f $target ]]; then
+            printf '  skipped %s (not installed in this client)\n' "$rel"; skipped=$((skipped + 1)); continue
+        fi
+        cur=$(hash_of "$target")
+        if [[ $cur == "$fixed" ]]; then
+            printf '  already applied: %s\n' "$rel"; same=$((same + 1)); continue
+        fi
+        if [[ $cur == "$orig" && -f $fixes_dir/$rel && $(hash_of "$fixes_dir/$rel") == "$fixed" ]]; then
+            if fixes_backup "$rel" && cp -- "$fixes_dir/$rel" "$target"; then
+                printf '  fixed: %s\n' "$rel"; applied=$((applied + 1))
+            else
+                printf '  could not write %s\n' "$rel"; skipped=$((skipped + 1))
+            fi
+            continue
+        fi
+        if [[ -f $patchfile ]] && command -v patch >/dev/null 2>&1; then
+            if patch -s -R -p1 -d "$client" --dry-run -i "$patchfile" >/dev/null 2>&1; then
+                printf '  already applied: %s\n' "$rel"; same=$((same + 1)); continue
+            fi
+            if patch -s -p1 -d "$client" --dry-run -i "$patchfile" >/dev/null 2>&1; then
+                if fixes_backup "$rel" && patch -s -p1 -d "$client" -i "$patchfile" >/dev/null 2>&1; then
+                    printf '  patched: %s\n' "$rel"; applied=$((applied + 1))
+                else
+                    printf '  could not patch %s (restoring)\n' "$rel"
+                    [[ -f $fixes_backup_dir/$rel ]] && cp -p -- "$fixes_backup_dir/$rel" "$target"
+                    skipped=$((skipped + 1))
+                fi
+                continue
+            fi
+        fi
+        printf '  left unchanged: %s (a different version from the one these fixes were made for%s)\n' "$rel" \
+            "$(command -v patch >/dev/null 2>&1 || printf ', and the patch tool is not installed')"
+        skipped=$((skipped + 1))
+    done <"$fixes_dir/fixes.manifest"
+    printf 'Addon fixes: %d applied, %d already in place, %d skipped.\n' "$applied" "$same" "$skipped"
+    [[ -z $fixes_backup_dir ]] || printf 'Originals kept in %s\n' "$fixes_backup_dir"
+}
+if (( use_fixes )); then
+    if fixes_find; then
+        printf '\nFound addon fixes: %s\n' "$fixes_origin"
+        [[ -f $fixes_dir/README.txt ]] && sed -n '1,12p' "$fixes_dir/README.txt" | sed 's/^/  /'
+        printf 'It changes these files in your client folder:\n'
+        cut -f1 "$fixes_dir/fixes.manifest" | grep -v '^#' | sed 's/^/  /'
+        if ask 'Apply these addon fixes?' Y; then
+            fixes_apply || printf 'Addon fixes could not be applied (the install itself is fine).\n'
+        else
+            printf 'Addon fixes skipped.\n'
+        fi
+    elif [[ -n $fixes_path ]]; then
+        printf '\nNo usable addon fixes at %s (it needs a fixes.manifest); skipped.\n' "$fixes_path"
+    else
+        printf '\nNo addon fixes folder found next to the installer (optional: a FTA-Addon-Fixes folder or .tar.gz).\n'
+    fi
+fi
 
 # ---- system libraries ----------------------------------------------------------------------------
 printf '\nChecking system libraries...\n'
