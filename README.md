@@ -38,6 +38,14 @@ It opens a terminal, finds your From The Ashes client folder (or asks you to pic
 to install any missing system libraries (it asks for your password), adds **From The Ashes (Linux)** to your
 applications menu and offers to start the game. Run it again at any time to update.
 
+**Optional addon fixes.** Releases may carry a separate `FTA-Addon-Fixes` download (a `.tar.gz`) with small fixes
+for addons in the base client. Put that file, or the unpacked `FTA-Addon-Fixes` folder, next to
+`FTA-Linux-Installer.run` and the installer finds it, lists the files it would change and asks. A file is
+replaced only if it is the version the fix was made for; otherwise the patch is applied if it fits (this needs
+the `patch` tool), and otherwise the file is left alone. Originals are kept in `FTA-Linux/addon-fix-backup/`.
+Use `--no-fixes` to skip the check or `--fixes PATH` to name the folder or archive. Without the side file
+nothing about the install changes.
+
 ### Manual install
 
 1. Open a terminal **in your client folder** (the one with `Wow.exe`). In most file managers: right-click an
@@ -147,6 +155,14 @@ tools/make-linux-portable.sh                 # gathers the payload, then runs th
 gh release create vX.Y --repo OWNER/fta-linux-client dist/FTA-Linux-Installer.run dist/fta-linux-client.tar.gz dist/FTA-Linux-SHA256SUMS.txt
 ```
 
+The optional addon-fixes side file is built from two copies of the changed addon files (originals and fixed),
+each holding `Interface/AddOns/...`:
+
+```
+tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR dist README_FILE      # writes dist/FTA-Addon-Fixes/ and .tar.gz
+gh release upload vX.Y --repo OWNER/fta-linux-client dist/FTA-Addon-Fixes.tar.gz
+```
+
 `tools/package.sh PAYLOAD_DIR [OUT_DIR]` builds the archive, the self-extracting installer and the checksums
 from a payload directory (its layout is described in the script). The shader packs in the payload are derived
 from the client's own shaders; they ship in release files, not in this repository.
@@ -158,6 +174,7 @@ from the client's own shaders; they ship in release files, not in this repositor
 | `overlay/` | `install.sh` and `FTA-Linux/play.sh`, `FTA-Linux/install-deps.sh`: what gets installed into a client folder |
 | `installer/installer-header.sh` | The one-click installer's script part (the payload is appended at build time) |
 | `tools/package.sh` | Builds the release files from a payload |
+| `tools/make-addon-fixes.sh` | Builds the optional addon-fixes side file (`fixes.manifest`, patches, fixed files) |
 
 ## Credits
 
