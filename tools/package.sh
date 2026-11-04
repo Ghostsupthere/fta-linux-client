@@ -9,6 +9,8 @@
 #   FTA-Linux/dxvk/                       dxvk-native (d3d9, d3d11, dxgi)
 #   FTA-Linux/VERSION.txt                 build stamp (optional)
 #   Utils/WarcraftXL/visuals/*.pack       offline shader packs (optional)
+# The addon fixes (the folder FTA-Addon-Fixes built by tools/make-addon-fixes.sh) are taken from ADDON_FIXES_DIR,
+# default OUT_DIR/FTA-Addon-Fixes, and travel inside the installer; they are not a separate download.
 # The scripts and README come from this repository. Output (OUT_DIR, default ./dist):
 #   fta-linux-client.tar.gz   FTA-Linux-Installer.run   FTA-Linux-SHA256SUMS.txt
 set -euo pipefail
@@ -31,6 +33,13 @@ cp -a -- "$payload/." "$stage/payload/"
 cp -- "$repo/overlay/FTA-Linux/play.sh" "$repo/overlay/FTA-Linux/install-deps.sh" "$stage/payload/FTA-Linux/"
 cp -- "$repo/overlay/install.sh" "$stage/install.sh"
 cp -- "$repo/README.md" "$stage/README.md"
+fixes=${ADDON_FIXES_DIR:-$out/FTA-Addon-Fixes}
+if [[ -f $fixes/fixes.manifest ]]; then
+    cp -a -- "$fixes" "$stage/FTA-Addon-Fixes"
+    printf 'Addon fixes bundled from %s\n' "$fixes"
+else
+    printf 'No addon fixes found at %s; the installer will have none.\n' "$fixes"
+fi
 chmod +x "$stage/install.sh" "$stage/payload/Wow64" "$stage/payload/FTA-Linux/play.sh" "$stage/payload/FTA-Linux/install-deps.sh"
 if find "$stage" -type l | grep -q .; then fail 'the payload contains symlinks'; fi
 

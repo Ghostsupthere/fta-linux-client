@@ -5,15 +5,15 @@
 #
 # It finds your From The Ashes client folder (the one with Wow.exe), installs the Linux client into it,
 # offers to install the system libraries it needs, adds a menu shortcut and offers to start the game.
-# Nothing the Windows client uses is changed, except addon fixes if you provide them (a FTA-Addon-Fixes folder
-# next to this file; it asks first and keeps backups).
+# Nothing the Windows client uses is changed, except the small addon fixes bundled in this file (it lists
+# them, asks first and keeps backups).
 #
 #   --client DIR     use this client folder instead of looking for one
 #   --yes            answer the questions with their defaults (installs missing libraries with sudo);
 #                    only installs into --client DIR or the folder you run it from
 #   --no-shortcut    do not add the menu shortcut
-#   --fixes PATH     apply this addon-fixes folder (or .tar.gz) instead of looking for one next to the installer
-#   --no-fixes       do not look for or apply addon fixes
+#   --fixes PATH     apply this addon-fixes folder (or .tar.gz) instead of the ones bundled in this file
+#   --no-fixes       do not apply addon fixes
 set -euo pipefail
 
 PAYLOAD_SHA256=@PAYLOAD_SHA256@
@@ -183,11 +183,10 @@ printf 'installed Wow64 sha256: %s\n' "$(hash_of "$client/Wow64")"
 [[ $(hash_of "$client/Wow64") == "$(hash_of "$tmp/payload/Wow64")" ]] || fail 'the installed Wow64 does not match the one in the installer (the file may be in use; close the game and run the installer again)'
 
 # ---- optional addon fixes ------------------------------------------------------------------------
-# A side payload, the folder FTA-Addon-Fixes (or FTA-Addon-Fixes*.tar.gz), is picked up when it sits next to this
-# installer, in the folder it was started from, or in the client folder. It holds small fixes for addons in the
-# base client (see its README.txt). Each file is changed only if it is the version the fix was made for, or if
-# the patch still applies cleanly; the originals are kept in FTA-Linux/addon-fix-backup/. Nothing here can
-# make the install fail.
+# The folder FTA-Addon-Fixes travels inside this installer (--fixes PATH names another folder or .tar.gz). It
+# holds small fixes for addons in the base client (see its README.txt). Each file is changed only if it is the
+# version the fix was made for, or if the patch still applies cleanly; the originals are kept in
+# FTA-Linux/addon-fix-backup/. Nothing here can make the install fail.
 fixes_dir=""
 fixes_origin=""
 fixes_resolve() { # fixes_resolve PATH: sets fixes_dir if PATH is a usable fixes folder or archive
@@ -205,16 +204,7 @@ fixes_resolve() { # fixes_resolve PATH: sets fixes_dir if PATH is a usable fixes
 }
 fixes_find() {
     [[ -n $fixes_path ]] && { fixes_resolve "$fixes_path" && fixes_origin=$fixes_path; return; }
-    local d seen="" hit
-    for d in "$(dirname -- "$self")" "$PWD" "$client"; do
-        d=$(cd -- "$d" 2>/dev/null && pwd -P) || continue
-        [[ $seen == *"|$d|"* ]] && continue
-        seen+="|$d|"
-        while IFS= read -r hit; do
-            if fixes_resolve "$hit"; then fixes_origin=$hit; return 0; fi
-        done < <(find "$d" -maxdepth 1 -name 'FTA-Addon-Fixes*' \( -type d -o -name '*.tar.gz' \) 2>/dev/null | sort -rV)
-    done
-    return 1
+    fixes_resolve "$tmp/FTA-Addon-Fixes" && fixes_origin="the ones bundled with this installer"
 }
 fixes_backup_dir=""
 fixes_backup() { # fixes_backup RELPATH: keeps the current file before it changes
@@ -273,14 +263,13 @@ fixes_apply() {
 }
 if (( use_fixes )); then
     if fixes_find; then
-        printf '\nFound addon fixes: %s\n' "$fixes_origin"
+        printf '\nAddon fixes: %s\n' "$fixes_origin"
         printf 'It changes these files in your client folder:\n'
         while IFS=$'\t' read -r rel _ _ _ note; do
             [[ -z $rel || $rel == \#* ]] && continue
             printf '  %s\n' "$rel"
             [[ -z ${note:-} ]] || printf '    %s\n' "$note"
         done <"$fixes_dir/fixes.manifest"
-        [[ ! -f $fixes_dir/README.txt ]] || printf '(details: README.txt inside %s)\n' "$fixes_origin"
         if ask 'Apply these addon fixes?' Y; then
             fixes_apply || printf 'Addon fixes could not be applied (the install itself is fine).\n'
         else
@@ -289,7 +278,7 @@ if (( use_fixes )); then
     elif [[ -n $fixes_path ]]; then
         printf '\nNo usable addon fixes at %s (it needs a fixes.manifest); skipped.\n' "$fixes_path"
     else
-        printf '\nNo addon fixes folder found next to the installer (optional: a FTA-Addon-Fixes folder or .tar.gz).\n'
+        printf '\nNo addon fixes are bundled with this installer.\n'
     fi
 fi
 
