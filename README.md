@@ -38,8 +38,8 @@ It opens a terminal, finds your From The Ashes client folder (or asks you to pic
 to install any missing system libraries (it asks for your password), adds **From The Ashes (Linux)** to your
 applications menu and offers to start the game. Run it again at any time to update.
 
-**Addon fixes.** The installer carries a few small fixes for addons in the base client (ElvUI chat, a Questie
-bridge, the ElvUI bag quest icon and mail skin). It lists each file it would change, with a one-line reason, and
+**Addon fixes.** The installer carries a few small fixes for addons in the base client (ElvUI chat, the ElvUI bag
+quest icon and mail skin, and Questie's server bridge and world map icons). It lists each file it would change, with a one-line reason, and
 asks first. A file is replaced only if it is the version the fix was made for; otherwise the patch is applied if it
 fits (this needs the `patch` tool), and otherwise the file is left alone. Originals are kept in
 `FTA-Linux/addon-fix-backup/`. Use `--no-fixes` to skip them, or `--fixes PATH` to apply another fixes folder or
@@ -163,6 +163,9 @@ into the installer, so there is no separate release file:
 ```
 tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR dist README_FILE SUMMARY_FILE   # writes dist/FTA-Addon-Fixes/
 ```
+
+The README and the per-file summaries for the current fixes are kept in `addon-fixes/` (`README.txt`, `summaries.tsv`); pass
+them as README_FILE and SUMMARY_FILE. Only these texts live in the repository, not the addon files themselves.
 
 `tools/package.sh PAYLOAD_DIR [OUT_DIR]` builds the archive, the self-extracting installer and the checksums
 from a payload directory (its layout is described in the script). The shader packs in the payload are derived

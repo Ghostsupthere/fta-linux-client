@@ -1,0 +1,7 @@
+Interface/AddOns/ElvUI/Media/SharedMedia.lua	ElvUI: the quest-start icon in the bags drew an opaque white box
+Interface/AddOns/ElvUI/Modules/Chat/Chat.lua	ElvUI: a % in a server achievement message caused a format() error
+Interface/AddOns/ElvUI/Modules/Skins/Blizzard/Mail.lua	ElvUI: mail skin error when an attachment icon cannot be loaded
+Interface/AddOns/Questie-335/Compat/Compat.lua	Questie: a server map sync no longer overwrites the correct zone mapping (icons vanishing)
+Interface/AddOns/Questie-335/Compat/HBD.lua	Questie: world map icons are redrawn when the zone dropdown changes
+Interface/AddOns/Questie-335/Database/Zones/zoneDB.lua	Questie: deterministic zone lookup instead of a table scan
+Interface/AddOns/Questie-335/ServerBridge/Bridge.lua	Questie bridge: keeps exploration triggers, stable catalog loading and map-area lookup

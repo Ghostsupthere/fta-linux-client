@@ -1,0 +1,89 @@
+FTA addon fixes
+===============
+
+Seven small Lua fixes for addons in the From The Ashes base client (three files in ElvUI, four in Questie-335).
+They are optional and independent of the Linux client: they apply to the Interface folder on any platform.
+Close the game before copying.
+
+1. ElvUI 6.09, Modules/Chat/Chat.lua: achievement chat messages
+   Symptom: "ElvUI\Modules\Chat\Chat.lua:1055: invalid option in `format'" after an achievement message.
+   Cause: ElvUI runs format() on the server's broadcast text, and a literal % in that text makes format() raise.
+   Fix: a FormatAchievementMessage helper tries format() under pcall and otherwise puts the player link in
+   place of the first %s. It covers both ACHIEVEMENT and GUILD_ACHIEVEMENT messages.
+   Status: loads under Lua 5.1; the failing achievement was never captured, so it has not been re-triggered.
+
+2. ElvUI 6.09, Media/SharedMedia.lua: quest-start icon in the bags
+   Symptom: items that start a quest (for example a Westfall Deed) show an opaque white box over their icon.
+   Cause: ElvUI's BagQuestIcon points at a file the client folder only has as an opaque .blp with no alpha, so the
+   "!" is drawn on a solid block.
+   Fix: BagQuestIcon uses Blizzard's own Interface\ContainerFrame\UI-Icon-QuestBang (gold border and "!", with alpha).
+   Status: confirmed in play.
+
+3. ElvUI 6.09, Modules/Skins/Blizzard/Mail.lua: attachments without an icon
+   Symptom: a Lua error while styling the mail window when an attachment's icon file cannot be loaded.
+   Cause: the client drops the normal texture of such a button, and the skin restyled it unconditionally.
+   Fix: the restyling is skipped when there is no icon.
+   Status: loads under Lua 5.1; the error was not re-triggered.
+
+4. Questie-335, ServerBridge/Bridge.lua: exploration quests, catalog loading, map area
+   a) Symptom: "Questie: [ERROR] Missing objective data for quest 62 - Scout through the Fargodeep Mine",
+      repeated. Affects quests whose objective is to explore an area (quest 62; 76 is the same kind).
+      Cause: with the server bridge connected, server records replace Questie's quest data, and the bridge
+      did not keep the exploration trigger ("triggerEnd"). The server-side code that builds the records was not
+      available, so this is inferred from the client side.
+      Fix: Store() copies the bundled triggerEnd into a server quest record that has none, for quests in the
+      bundled database.
+      Status: the errors stopped for quest 62 in play.
+   b) Symptom: map icons disappearing while the world map sits open.
+      Cause: a restarted or overlapping catalog fetch for the same area emptied the live catalog table before the
+      new fetch finished.
+      Fix: each fetch fills a separate staging table and replaces the live catalog only when it is complete.
+   c) Symptom: the viewed map area flickered between values with the map untouched.
+      Cause: ViewedArea() called QuestieCompat.GetCurrentMapUiMapId, which does not exist, and then scanned
+      UiMapData with pairs(), whose order is not stable.
+      Fix: it uses QuestieCompat.GetCurrentUiMapID().
+   Status: items b and c confirmed in play together with fixes 5 to 7.
+
+5. Questie-335, Compat/HBD.lua: stale icons when changing the map zone
+   Symptom: after choosing another zone in the world map's dropdown, the previous zone's icons stayed on the map.
+   Cause: UpdateWorldMap() skipped redrawing when the resolved uiMapID looked unchanged.
+   Fix: it also compares the dropdown's displayed zone name and redraws when that changed.
+   Status: confirmed in play.
+
+6. Questie-335, Compat/Compat.lua: map icons vanishing (root cause)
+   Symptom: icons showed correctly and then disappeared after a few seconds.
+   Cause: RegisterServerMap() overwrote mapIdToUiMapId[map.id] on every server sync. Several server areas share
+   one native zone (for example Westfall), so the last one registered replaced Questie's own correct mapping.
+   Fix: the entry is only set when none exists yet.
+   Status: confirmed in play.
+
+7. Questie-335, Database/Zones/zoneDB.lua: zone lookup
+   Symptom: the same input could resolve to different areas between calls.
+   Cause: GetAreaIdByUiMapId() scanned its table with pairs() and returned the first match.
+   Fix: it indexes the table directly.
+   Status: confirmed in play together with fixes 4 to 6.
+
+Install
+-------
+Option 0, with the installer: it carries these fixes. It lists the files it will change, asks, backs the originals
+up under FTA-Linux/addon-fix-backup/ and applies the fixes: a file is replaced only if it is the version these
+fixes were made for, otherwise the patch is applied if it fits (needs the "patch" tool), otherwise the file is left
+alone. Use --no-fixes to skip it, or --fixes PATH to point at a fixes folder.
+
+Option A, replace the seven files by hand. These are complete copies of the files as shipped in the base client, so
+only use this if your ElvUI is 6.09 and your Questie-335 matches the base client. Copy the Interface folder from
+this archive over the Interface folder of your client folder (the one that holds Wow64 and Data).
+
+Option B, apply the patches by hand. Works with other versions of those files if the surrounding lines match. From your
+client folder:
+
+    for p in FTA-Addon-Fixes/patches/*.patch; do patch -p1 --dry-run < "$p"; done      # check first
+    for p in FTA-Addon-Fixes/patches/*.patch; do patch -p1 < "$p"; done
+
+Then /reload in game, or restart the client.
+
+Undo: patch -R -p1 with the same patch files (after Option B), or restore your backup (the installer keeps
+one in FTA-Linux/addon-fix-backup/).
+
+ElvUI and Questie keep their own licenses. These changes are offered under the same terms as the files they
+modify. No game data is included.
