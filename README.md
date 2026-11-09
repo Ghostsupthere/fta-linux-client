@@ -31,7 +31,7 @@ or run `bash FTA-Linux-Installer.run` in a terminal.
 
 It opens a terminal, finds your From The Ashes client folder (or asks you to pick it), installs into it, offers
 to install any missing system libraries (it asks for your password), adds **From The Ashes (Linux)** to your
-applications menu and offers to start the game. Run it again at any time to update.
+applications menu (it opens the launcher) and offers to open the launcher. Run it again at any time to update.
 
 **Addon fixes.** The installer carries a few small fixes for addons in the base client (ElvUI chat, the ElvUI bag
 quest icon and mail skin, Questie's server bridge and world map icons, and the Ashen Bot Upgrade tooltip). It lists each file it would change, with a one-line reason, and
@@ -40,6 +40,25 @@ fits (this needs the `patch` tool), and otherwise the file is left alone. Origin
 `FTA-Linux/addon-fix-backup/`. Use `--no-fixes` to skip them, or `--fixes PATH` to apply another fixes folder or
 `.tar.gz`. These are Lua files shared with the Windows client in the same folder, so Windows gets the fixes too.
 Up to v0.2.6 they were a separate `FTA-Addon-Fixes.tar.gz` download; from v0.2.7 the single `.run` is all you need.
+
+### The launcher
+
+The launcher comes with the installer (there is no separate download). Open **From The Ashes (Linux)** from your
+applications menu, or run `FTA-Linux/launcher.sh` in your client folder.
+
+- **Play**: starts the game. When a newer release is out it says *Update ready*; the Update button downloads the
+  installer from this project's release page, checks it, asks before installing, installs it and restarts. The
+  *What's new* panel shows the release notes.
+- **Game**: realm address (written to `realmlist.wtf` and `Config.wtf`), windowed, vsync, resolution and
+  anti-aliasing.
+- **Settings**: the WarcraftXL and performance options as checkboxes, with presets and a Safe mode, and a Debugging
+  section (Lua errors, logging switches). **Apply** saves them and keeps the previous files in
+  `FTA-Linux/settings-backup/`. Nothing is saved while the game is running.
+- **Diagnostics**: checks the system, graphics driver, game files and libraries, and copies or saves a report to
+  attach to a bug report (it holds no account data).
+
+`FTA-Linux/play.sh` still starts the game without the launcher (the menu entry's *Play directly* action does the
+same).
 
 ### Manual install
 
@@ -109,6 +128,7 @@ distributions; if it does not open, `FTA-Linux/play.sh` starts the game without 
 
 Native features are switched in the client's `WarcraftXL.cfg` (the file the Windows client reads) or by an
 environment variable of the same name, which wins. Missing keys use built-in defaults.
+The launcher's Settings tab edits the same file for you.
 
 | Key | Effect |
 |---|---|
@@ -133,6 +153,11 @@ environment variable of the same name, which wins. Missing keys use built-in def
   reporting. If the run stopped before a folder was chosen, the log is `~/.local/state/fta-linux-client/install.log`.
   `sha256sum Wow64` in the client folder should match the one in the log's "installed Wow64" line.
 - **Missing libraries**: run `FTA-Linux/install-deps.sh` (see the distribution notes).
+- **The launcher does not open**: run `FTA-Linux/launcher.sh` in a terminal to see why. It needs a desktop with a
+  compositor (Wayland or X11) and `fontconfig`; `install-deps.sh` reports it. `FTA-Linux/play.sh` starts the game
+  without the launcher.
+- **"GitHub's server did not answer (HTTP 504)" when updating**: GitHub's download servers are sometimes slow for a
+  file published a few minutes ago. Press *Try again* after a minute.
 - **A crash**: the report is in `Errors/` and the launch log in `Logs/native-launch-*.log`, both in your client
   folder. Attach both when reporting.
 
