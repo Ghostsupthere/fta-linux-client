@@ -284,8 +284,9 @@ fn finish(checks: Vec<Check>, launcher_version: &str, update_note: &str, client:
     text.push_str(&format!("launcher version: {launcher_version}\n"));
     if let Some(client) = client {
         text.push_str(&format!("installed release: {}\n", crate::updater::installed_tag(client).unwrap_or_else(|| "not recorded".into())));
-        if let Some(stamp) = crate::client::installed_stamp(client) {
-            text.push_str(&format!("build: {stamp}\n"));
+        if let Ok(stamp) = std::fs::read_to_string(client.join("FTA-Linux/VERSION.txt")) {
+            let line = stamp.lines().map(str::trim).filter(|l| !l.is_empty()).collect::<Vec<_>>().join(" | ");
+            text.push_str(&format!("build: {line}\n"));
         }
     }
     if !update_note.is_empty() {

@@ -30,11 +30,12 @@ pub fn find(args: &[String]) -> Option<PathBuf> {
     is_client(&client).then_some(client)
 }
 
-/// The overlay's build stamp (`FTA-Linux/VERSION.txt`), as one line, if installed.
+/// The overlay's build stamp as one short line (`commit 0fde5ff`), if installed. The build time and glibc lines
+/// of `FTA-Linux/VERSION.txt` are for bug reports (the Diagnostics report has them), not for the Play page.
 pub fn installed_stamp(client: &Path) -> Option<String> {
     let text = std::fs::read_to_string(client.join("FTA-Linux/VERSION.txt")).ok()?;
-    let line = text.lines().map(str::trim).filter(|l| !l.is_empty()).collect::<Vec<_>>().join("  ·  ");
-    (!line.is_empty()).then_some(line)
+    let commit = text.lines().find_map(|l| l.trim().strip_prefix("commit:")).map(|c| format!("commit {}", c.trim()))?;
+    Some(commit)
 }
 
 /// True while a `Wow64` process of this user is running. Settings files must not be edited then: the game

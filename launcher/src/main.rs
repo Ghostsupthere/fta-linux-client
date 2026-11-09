@@ -609,14 +609,26 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
-    // The window has no system title bar, so the header starts the move itself.
+    // The window has no system title bar, so the header starts the move itself. Once the system takes over the
+    // move (Wayland), the button release goes to it and never reaches the window, which would leave the header
+    // holding the pointer: every later click would start another move instead of pressing a button. So the
+    // release is delivered here, once the press has been handled.
     let weak = ui.as_weak();
-    ui.on_drag_window(move || {
-        if let Some(ui) = weak.upgrade() {
-            ui.window().with_winit_window(|w| {
-                let _ = w.drag_window();
-            });
+    ui.on_drag_window(move |x, y| {
+        let Some(ui) = weak.upgrade() else { return };
+        let started = ui.window().with_winit_window(|w| w.drag_window().is_ok()).unwrap_or(false);
+        if !started {
+            return;
         }
+        let weak = weak.clone();
+        slint::Timer::single_shot(std::time::Duration::from_millis(30), move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.window().dispatch_event(slint::platform::WindowEvent::PointerReleased {
+                    position: slint::LogicalPosition::new(x, y),
+                    button: slint::platform::PointerEventButton::Left,
+                });
+            }
+        });
     });
 
     ui.on_open_link(|url| open_link(url.as_str()));

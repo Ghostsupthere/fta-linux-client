@@ -298,7 +298,8 @@ export component MainWindow inherits Window {
     // Window
     callback close-requested;
     callback minimize-requested;
-    callback drag-window;
+    // Starts moving the window; the position is where the pointer went down.
+    callback drag-window(float, float);
     // Opens one of the launcher's fixed links in the user's browser (the Rust side checks the URL).
     callback open-link(string);
 
@@ -322,7 +323,7 @@ export component MainWindow inherits Window {
         // ---- header (drag area, logo, window buttons) ----
         Rectangle {
             x: 0; y: 0; width: parent.width; height: 84px;
-            TouchArea { pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.drag-window(); } } }
+            TouchArea { pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.drag-window(self.mouse-x / 1px, self.mouse-y / 1px); } } }
             HorizontalLayout {
                 padding-left: 34px; padding-right: 20px; padding-top: 22px; padding-bottom: 12px;
                 spacing: 14px;
