@@ -183,7 +183,8 @@ from the client's own shaders; they ship in release files, not in this repositor
 ## Credits
 
 - **From The Ashes** is the server this client is made for.
-- **wowdecomp**, the C++ reconstruction of the 3.3.5a client this is built on, and the forks of it.
+- The client is built on **wowdecomp**, the C++ reconstruction of the
+  3.3.5a client, and the forks of it.
 - [dxvk](https://github.com/doitsujin/dxvk) and SDL3, which it renders and runs through.
 - **The World of Warcraft community**: the modders, server developers, tool authors and players whose years of work
   make projects like this possible. Thank you.
