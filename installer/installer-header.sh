@@ -14,13 +14,15 @@
 #   --no-shortcut    do not add the menu shortcut
 #   --fixes PATH     apply this addon-fixes folder (or .tar.gz) instead of the ones bundled in this file
 #   --no-fixes       do not apply addon fixes
+#   --update         for the launcher's Update button: no questions, no sudo, no terminal; keeps the shortcut
+#                    (pointing it at the launcher), applies addon fixes only if they were applied before
 set -euo pipefail
 
 PAYLOAD_SHA256=@PAYLOAD_SHA256@
 
 self=$(readlink -f -- "$0")
 ORIGINAL_ARGS="$*"
-client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1
+client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0
 out_tty=0; [[ -t 1 ]] && out_tty=1   # the log below replaces stdout, so ask now
 while (( $# )); do
     case $1 in
@@ -29,9 +31,10 @@ while (( $# )); do
         --no-shortcut) shortcut=0 ;;
         --fixes) fixes_path=${2:?--fixes needs a folder or .tar.gz}; shift ;;
         --no-fixes) use_fixes=0 ;;
+        --update) update=1; assume=1; interm=1 ;;
         --in-terminal) interm=1 ;;
         --pause) pause=1 ;;
-        --help|-h) sed -n '2,16p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --help|-h) sed -n '2,18p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
     esac
     shift
@@ -101,7 +104,7 @@ pause_and_exit() {
 }
 fail() {
     printf '\nInstall failed: %s\n' "$*" >&2
-    if (( ! out_tty )) && command -v zenity >/dev/null 2>&1; then zenity --error --text="$*" 2>/dev/null || true; fi
+    if (( ! out_tty && ! update )) && command -v zenity >/dev/null 2>&1; then zenity --error --text="$*" 2>/dev/null || true; fi
     pause_and_exit 1
 }
 ask() { # ask "question" default(Y|N): returns 0 for yes
@@ -261,6 +264,15 @@ fixes_apply() {
     printf 'Addon fixes: %d applied, %d already in place, %d skipped.\n' "$applied" "$same" "$skipped"
     [[ -z $fixes_backup_dir ]] || printf 'Originals kept in %s\n' "$fixes_backup_dir"
 }
+fixes_applied_before() { # true if this client has had addon fixes applied by an earlier install
+    local rel orig fixed _
+    [[ -d $client/FTA-Linux/addon-fix-backup ]] && return 0
+    while IFS=$'\t' read -r rel orig fixed _; do
+        [[ -z $rel || $rel == \#* ]] && continue
+        [[ -f $client/$rel && $(hash_of "$client/$rel") == "$fixed" ]] && return 0
+    done <"$fixes_dir/fixes.manifest"
+    return 1
+}
 if (( use_fixes )); then
     if fixes_find; then
         printf '\nAddon fixes: %s\n' "$fixes_origin"
@@ -270,7 +282,15 @@ if (( use_fixes )); then
             printf '  %s\n' "$rel"
             [[ -z ${note:-} ]] || printf '    %s\n' "$note"
         done <"$fixes_dir/fixes.manifest"
-        if ask 'Apply these addon fixes?' Y; then
+        # An update from the launcher asks nothing, so it only carries on what the person accepted before.
+        if (( update )); then
+            if fixes_applied_before; then
+                printf 'Addon fixes were applied here before; applying the current ones.\n'
+                fixes_apply || printf 'Addon fixes could not be applied (the install itself is fine).\n'
+            else
+                printf 'Addon fixes were not applied here before, so they are left out. Run the installer by hand to review them.\n'
+            fi
+        elif ask 'Apply these addon fixes?' Y; then
             fixes_apply || printf 'Addon fixes could not be applied (the install itself is fine).\n'
         else
             printf 'Addon fixes skipped.\n'
@@ -285,7 +305,9 @@ fi
 # ---- system libraries ----------------------------------------------------------------------------
 printf '\nChecking system libraries...\n'
 if ! "$client/FTA-Linux/install-deps.sh"; then
-    if ask 'Install the missing system libraries now (asks for your password)?' Y; then
+    if (( update )); then
+        printf 'Some system libraries are missing. Run FTA-Linux/install-deps.sh --install in the client folder to see and install them.\n'
+    elif ask 'Install the missing system libraries now (asks for your password)?' Y; then
         "$client/FTA-Linux/install-deps.sh" --install --yes || fail 'the libraries could not be installed. Run FTA-Linux/install-deps.sh to see the exact command.'
     else
         printf 'Skipped. Run FTA-Linux/install-deps.sh --install in the client folder when you are ready.\n'
@@ -293,21 +315,37 @@ if ! "$client/FTA-Linux/install-deps.sh"; then
 fi
 
 # ---- menu shortcut -------------------------------------------------------------------------------
-if (( shortcut )); then
-    apps=${XDG_DATA_HOME:-$HOME/.local/share}/applications
+# With the launcher installed the shortcut opens it (Play is one click inside); "Play directly" starts the game
+# without it. An update keeps an existing shortcut, switching it to the launcher, and never adds a new one.
+apps=${XDG_DATA_HOME:-$HOME/.local/share}/applications
+entry=$apps/fta-linux-client.desktop
+if [[ -x $client/FTA-Linux/launcher.sh ]]; then start_script=$client/FTA-Linux/launcher.sh; else start_script=$client/FTA-Linux/play.sh; fi
+write_shortcut() {
     mkdir -p -- "$apps"
     {
         printf '[Desktop Entry]\nType=Application\nName=From The Ashes (Linux)\n'
         printf 'Comment=Native Linux client for From The Ashes\n'
-        printf 'Exec="%s/FTA-Linux/play.sh"\nPath=%s\nTerminal=false\nCategories=Game;\n' "$client" "$client"
-    } >"$apps/fta-linux-client.desktop"
+        printf 'Exec="%s"\nPath=%s\nTerminal=false\nCategories=Game;\n' "$start_script" "$client"
+        if [[ $start_script == */launcher.sh ]]; then
+            printf 'Actions=Play;\n\n[Desktop Action Play]\nName=Play directly\nExec="%s/FTA-Linux/play.sh"\n' "$client"
+        fi
+    } >"$entry"
+}
+if (( update )); then
+    if [[ -f $entry ]] && grep -qF "Exec=\"$client/FTA-Linux/" "$entry" 2>/dev/null; then
+        write_shortcut
+        printf 'Menu shortcut updated.\n'
+    fi
+elif (( shortcut )); then
+    write_shortcut
     printf 'Added "From The Ashes (Linux)" to your applications menu.\n'
 fi
 
-printf '\nDone. Start it any time with:  %s/FTA-Linux/play.sh\n' "$client"
-if ask 'Start the game now?' N; then
+printf '\nDone. Start it any time with:  %s\n' "$start_script"
+if [[ $start_script == */launcher.sh ]]; then start_question='Open the launcher now?'; else start_question='Start the game now?'; fi
+if ask "$start_question" N; then
     pause=0
-    "$client/FTA-Linux/play.sh" || true
+    "$start_script" || true
 fi
 pause_and_exit 0
 exit 0

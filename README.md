@@ -142,13 +142,15 @@ in `Utils/WarcraftXL/visuals/` are harmless to keep.
 
 ## Releasing
 
-The binary parts are built in the [source tree](https://github.com/Ghostsupthere/fta-wd-ix-linux-native) and packaged here
+The binary parts are built in the [source tree](https://github.com/Ghostsupthere/fta-wd-ix-linux-native) and packaged here. Set `RELEASE_TAG` (for example `RELEASE_TAG=v0.2.10`) when packaging, so the launcher can tell which release is installed.
 
 ## Layout
 
 | Path | Contents |
 |---|---|
-| `overlay/` | `install.sh` and `FTA-Linux/play.sh`, `FTA-Linux/install-deps.sh`: what gets installed into a client folder |
+| `overlay/` | `install.sh` and `FTA-Linux/play.sh`, `FTA-Linux/launcher.sh`, `FTA-Linux/install-deps.sh`: what gets installed into a client folder |
 | `installer/installer-header.sh` | The one-click installer's script part (the payload is appended at build time) |
 | `tools/package.sh` | Builds the release files from a payload |
 | `tools/make-addon-fixes.sh` | Builds the addon-fixes folder (`fixes.manifest`, patches, fixed files) that `package.sh` bundles into the installer |
+| `launcher/` | The launcher (Rust and Slint): update check, Play, game and WarcraftXL settings, diagnostics |
+| `tools/build-launcher.sh` | Builds the launcher against the game's glibc (needs Nix) |

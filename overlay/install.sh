@@ -29,9 +29,14 @@ done
 [[ -f $target/Wow.exe || -f $target/WarcraftXL.dll ]] || printf 'warning: no Wow.exe or WarcraftXL.dll in %s; continuing\n' "$target" >&2
 [[ -d $here/payload ]] || fail 'payload folder is missing next to install.sh'
 
-# Overwrite our own files (Wow64, FTA-Linux); keep anything else that exists unless --force.
-rm -rf -- "$target/FTA-Linux"
-cp -r -- "$here/payload/FTA-Linux" "$target/FTA-Linux"
+# Overwrite our own files (Wow64, FTA-Linux); keep anything else that exists unless --force. The backups the
+# launcher and the installer made of the person's own files survive a reinstall.
+if [[ -d $target/FTA-Linux ]]; then
+    find "$target/FTA-Linux" -mindepth 1 -maxdepth 1 ! -name settings-backup ! -name addon-fix-backup -exec rm -rf -- {} +
+else
+    mkdir -p -- "$target/FTA-Linux"
+fi
+cp -r -- "$here/payload/FTA-Linux/." "$target/FTA-Linux/"
 cp -f -- "$here/payload/Wow64" "$target/Wow64"
 mkdir -p -- "$target/Utils/WarcraftXL/visuals"
 for pack in "$here"/payload/Utils/WarcraftXL/visuals/*.pack; do
@@ -41,6 +46,9 @@ for pack in "$here"/payload/Utils/WarcraftXL/visuals/*.pack; do
     fi
 done
 chmod +x "$target/Wow64" "$target/FTA-Linux/play.sh" "$target/FTA-Linux/install-deps.sh"
+for f in launcher.sh fta-launcher; do
+    if [[ -f $target/FTA-Linux/$f ]]; then chmod +x "$target/FTA-Linux/$f"; fi
+done
 
 if [[ $target == "$PWD" ]]; then prefix=.; else prefix=$target; fi
 printf 'Installed into %s\nNext, from that folder:\n  %s/FTA-Linux/install-deps.sh --install   (system libraries, if the check below lists any)\n  %s/FTA-Linux/play.sh --check\n  %s/FTA-Linux/play.sh\n\n' \

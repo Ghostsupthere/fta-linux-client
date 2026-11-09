@@ -8,9 +8,12 @@
 #   FTA-Linux/lib/                        glibc, loader, C++ runtime, xvidcore
 #   FTA-Linux/dxvk/                       dxvk-native (d3d9, d3d11, dxgi)
 #   FTA-Linux/VERSION.txt                 build stamp (optional)
+#   FTA-Linux/fta-launcher                the launcher (optional; tools/build-launcher.sh builds it)
 #   Utils/WarcraftXL/visuals/*.pack       offline shader packs (optional)
 # The addon fixes (the folder FTA-Addon-Fixes built by tools/make-addon-fixes.sh) are taken from ADDON_FIXES_DIR,
 # default OUT_DIR/FTA-Addon-Fixes, and travel inside the installer; they are not a separate download.
+# RELEASE_TAG (for example v0.2.10) is recorded in FTA-Linux/RELEASE so the launcher knows which release is
+# installed; leave it out for a development build.
 # The scripts and README come from this repository. Output (OUT_DIR, default ./dist):
 #   fta-linux-client.tar.gz   FTA-Linux-Installer.run   FTA-Linux-SHA256SUMS.txt
 set -euo pipefail
@@ -31,6 +34,18 @@ trap 'rm -rf -- "$stage"' EXIT
 mkdir -p -- "$stage/payload"
 cp -a -- "$payload/." "$stage/payload/"
 cp -- "$repo/overlay/FTA-Linux/play.sh" "$repo/overlay/FTA-Linux/install-deps.sh" "$stage/payload/FTA-Linux/"
+if [[ -f $payload/FTA-Linux/fta-launcher ]]; then
+    cp -- "$repo/overlay/FTA-Linux/launcher.sh" "$stage/payload/FTA-Linux/"
+    chmod +x "$stage/payload/FTA-Linux/launcher.sh" "$stage/payload/FTA-Linux/fta-launcher"
+    printf 'Launcher bundled.\n'
+else
+    printf 'No launcher at %s; the installer will not carry one.\n' "$payload/FTA-Linux/fta-launcher"
+fi
+if [[ -n ${RELEASE_TAG:-} ]]; then
+    [[ $RELEASE_TAG =~ ^v[0-9]+(\.[0-9]+)*$ ]] || fail "RELEASE_TAG must look like v0.2.10, not '$RELEASE_TAG'"
+    printf '%s\n' "$RELEASE_TAG" >"$stage/payload/FTA-Linux/RELEASE"
+    printf 'Release recorded: %s\n' "$RELEASE_TAG"
+fi
 cp -- "$repo/overlay/install.sh" "$stage/install.sh"
 cp -- "$repo/README.md" "$stage/README.md"
 fixes=${ADDON_FIXES_DIR:-$out/FTA-Addon-Fixes}

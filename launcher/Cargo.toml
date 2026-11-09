@@ -8,15 +8,22 @@ license = "GPL-3.0-or-later"
 slint = { version = "1.18", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-femtovg", "accessibility", "unstable-winit-030"] }
 
 png = { version = "0.18", optional = true }
+ureq = { version = "3", default-features = false, features = ["rustls", "json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
 
 [features]
-# Development only: FTA_LAUNCHER_SNAPSHOT=out.png renders the window to a file and exits.
-dev-snapshot = ["dep:png"]
+# Development only: FTA_LAUNCHER_SNAPSHOT=out.png renders the window to a file and exits, and
+# FTA_LAUNCHER_FAKE_LATEST / FTA_LAUNCHER_LOCAL_INSTALLER let the update flow run against a local installer.
+dev = ["dep:png"]
 
 [build-dependencies]
 slint-build = "1.18"
 
 [profile.release]
-opt-level = 3
-lto = "thin"
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
 strip = true

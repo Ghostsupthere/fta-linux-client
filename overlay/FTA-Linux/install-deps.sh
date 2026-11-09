@@ -27,29 +27,30 @@ done
 [[ -r /etc/os-release ]] && . /etc/os-release
 ids=" ${ID:-} ${ID_LIKE:-} "
 
-# Packages per family: SDL3, libcurl, ALSA, PulseAudio client libraries, Vulkan loader and a Vulkan driver.
+# Packages per family: SDL3, libcurl, ALSA, PulseAudio client libraries, Vulkan loader and a Vulkan driver, and
+# fontconfig and FreeType for the launcher.
 manager="" packages=() note=""
 if [[ $ids == *' arch '* || $ids == *' cachyos '* || $ids == *' manjaro '* ]]; then
     manager=pacman
-    packages=(sdl3 curl alsa-lib libpulse vulkan-icd-loader vulkan-radeon vulkan-intel)
+    packages=(sdl3 curl alsa-lib libpulse vulkan-icd-loader vulkan-radeon vulkan-intel fontconfig freetype2)
     note='NVIDIA users also need nvidia-utils (the driver package for your card).'
 elif [[ $ids == *' debian '* || $ids == *' ubuntu '* ]]; then
     manager=apt
     # The t64 names are the ones Debian 13 and Ubuntu 24.04+ use; older releases keep the plain names.
     cand() { apt-cache policy "$1" 2>/dev/null | awk '/Candidate:/ {print $2}'; }
     pick() { for name in "$@"; do c=$(cand "$name"); [[ -n $c && $c != '(none)' ]] && { echo "$name"; return; }; done; echo "$1"; }
-    packages=("$(pick libcurl4t64 libcurl4)" "$(pick libasound2t64 libasound2)" libpulse0 libvulkan1 mesa-vulkan-drivers)
+    packages=("$(pick libcurl4t64 libcurl4)" "$(pick libasound2t64 libasound2)" libpulse0 libvulkan1 mesa-vulkan-drivers libfontconfig1 libfreetype6)
     note='NVIDIA users also need the proprietary driver (nvidia-driver).'
     sdl=$(cand libsdl3-0)
     if [[ -n $sdl && $sdl != '(none)' ]]; then packages=(libsdl3-0 "${packages[@]}")
     else note+=$'\nThis release has no SDL3 package (it is in Debian 13 and Ubuntu 25.04 or newer). Upgrade, or build SDL 3.2+\nfrom source into /usr/local; the steps are in README.md under "Ubuntu".'; fi
 elif [[ $ids == *' fedora '* || $ids == *' rhel '* || $ids == *' centos '* ]]; then
     manager=dnf
-    packages=(SDL3 libcurl alsa-lib pulseaudio-libs vulkan-loader mesa-vulkan-drivers)
+    packages=(SDL3 libcurl alsa-lib pulseaudio-libs vulkan-loader mesa-vulkan-drivers fontconfig freetype)
     note='NVIDIA users also need the driver from RPM Fusion (akmod-nvidia). SDL3 needs Fedora 42 or newer.'
 elif [[ $ids == *' suse '* || $ids == *' opensuse'* ]]; then
     manager=zypper
-    packages=(libSDL3-0 libcurl4 alsa-lib libpulse0 libvulkan1 Mesa-vulkan-drivers)
+    packages=(libSDL3-0 libcurl4 alsa-lib libpulse0 libvulkan1 Mesa-vulkan-drivers fontconfig libfreetype6)
     note='NVIDIA users also need the driver from NVIDIA'"'"'s repository.'
 fi
 
@@ -60,10 +61,12 @@ for dir in /usr/lib /usr/lib64 /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu /
     [[ -d $dir ]] && libpath+=":$dir"
 done
 missing=""
-if [[ -x $client/Wow64 ]]; then
-    listing=$("$here/lib/ld-linux-x86-64.so.2" --library-path "$libpath" --list "$client/Wow64" 2>&1 || true)
-    missing=$(grep -oE '[A-Za-z0-9_.+-]+\.so[.0-9]*' <<<"$(grep -E 'not found|cannot open shared object' <<<"$listing")" | sort -u | grep -v '^Wow64' || true)
-fi
+for exe in "$client/Wow64" "$here/fta-launcher"; do   # the launcher is only there in releases that carry it
+    [[ -x $exe ]] || continue
+    listing=$("$here/lib/ld-linux-x86-64.so.2" --library-path "$libpath" --list "$exe" 2>&1 || true)
+    missing+=$'\n'$(grep -oE '[A-Za-z0-9_.+-]+\.so[.0-9]*' <<<"$(grep -E 'not found|cannot open shared object' <<<"$listing")" | sort -u | grep -v '^Wow64' | grep -v '^fta-launcher' || true)
+done
+missing=$(sed '/^$/d' <<<"$missing" | sort -u)
 # Libraries SDL3 and the Vulkan loader open at run time do not show up in the list above.
 runtime=""
 # (command substitution, not `| grep -q`: with pipefail the early exit would SIGPIPE find and report a false miss)

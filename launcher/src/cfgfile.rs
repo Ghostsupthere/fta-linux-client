@@ -18,6 +18,8 @@ pub enum Style {
     Cfg,
     /// `SET name "value"`
     Wtf,
+    /// `Data/<locale>/realmlist.wtf`: `set realmlist value` (no quotes, as the game's own tools write it)
+    Realmlist,
 }
 
 struct Line {
@@ -50,7 +52,7 @@ fn parse_line(style: Style, line: &str) -> Option<(String, String)> {
             }
             Some((k.to_string(), v.trim().to_string()))
         }
-        Style::Wtf => {
+        Style::Wtf | Style::Realmlist => {
             let rest = t.strip_prefix("SET ").or_else(|| t.strip_prefix("set "))?;
             let rest = rest.trim_start();
             let (k, v) = match rest.split_once(char::is_whitespace) {
@@ -104,7 +106,7 @@ impl Doc {
     fn same_key(&self, a: &str, b: &str) -> bool {
         match self.style {
             Style::Cfg => a == b,
-            Style::Wtf => a.eq_ignore_ascii_case(b),
+            Style::Wtf | Style::Realmlist => a.eq_ignore_ascii_case(b),
         }
     }
 
@@ -112,6 +114,7 @@ impl Doc {
         match self.style {
             Style::Cfg => format!("{key}={value}"),
             Style::Wtf => format!("SET {key} \"{value}\""),
+            Style::Realmlist => format!("set {key} {value}"),
         }
     }
 
@@ -217,6 +220,18 @@ mod tests {
         assert!(d.set("gxWindow", "0"));
         assert!(d.set("M2UseThreads", "0"));
         assert_eq!(d.to_text(), "SET locale \"enUS\"\nSET gxWindow \"0\"\nSET M2UseThreads \"0\"\n");
+    }
+
+    #[test]
+    fn realmlist_keeps_its_unquoted_form() {
+        let mut d = Doc::parse(Style::Realmlist, "set realmlist 192.168.50.215\r\n");
+        assert_eq!(d.get("realmlist").as_deref(), Some("192.168.50.215"));
+        assert!(!d.set("realmlist", "192.168.50.215"));
+        assert!(d.set("realmlist", "wow.example.org"));
+        assert_eq!(d.to_text(), "set realmlist wow.example.org\r\n");
+        let mut empty = Doc::parse(Style::Realmlist, "");
+        assert!(empty.set("realmlist", "a.b"));
+        assert_eq!(empty.to_text(), "set realmlist a.b\n");
     }
 
     #[test]

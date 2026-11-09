@@ -98,34 +98,44 @@ impl Settings {
         })
     }
 
-    /// Copies the files about to change into `FTA-Linux/settings-backup/<unix seconds>/` and keeps the newest ten.
     fn backup(&self, files: &[&Path]) -> Result<Option<PathBuf>, String> {
-        let existing: Vec<&&Path> = files.iter().filter(|p| p.exists()).collect();
-        if existing.is_empty() {
-            return Ok(None);
-        }
-        let root = self.client.join("FTA-Linux/settings-backup");
-        let stamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        let dir = root.join(stamp.to_string());
-        fs::create_dir_all(&dir).map_err(|e| format!("Could not create the backup folder: {e}"))?;
-        for p in existing {
-            let name = p.file_name().ok_or("bad file name")?;
-            fs::copy(p, dir.join(name)).map_err(|e| format!("Could not back up {}: {e}", p.display()))?;
-        }
-        // Keep the newest ten; names are unix seconds, so a numeric sort is chronological.
-        let mut all: Vec<u64> = fs::read_dir(&root)
-            .map(|rd| rd.flatten().filter_map(|e| e.file_name().to_str()?.parse().ok()).collect())
-            .unwrap_or_default();
-        all.sort_unstable();
-        while all.len() > 10 {
-            let old = all.remove(0);
-            let _ = fs::remove_dir_all(root.join(old.to_string()));
-        }
-        Ok(Some(dir))
+        backup_files(&self.client, files)
     }
+}
+
+/// Copies the files about to change into `FTA-Linux/settings-backup/<unix seconds>/` and keeps the newest ten.
+/// Returns the folder, or None if none of the files exist yet.
+pub fn backup_files(client: &Path, files: &[&Path]) -> Result<Option<PathBuf>, String> {
+    let existing: Vec<&&Path> = files.iter().filter(|p| p.exists()).collect();
+    if existing.is_empty() {
+        return Ok(None);
+    }
+    let root = client.join("FTA-Linux/settings-backup");
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let dir = root.join(stamp.to_string());
+    fs::create_dir_all(&dir).map_err(|e| format!("Could not create the backup folder: {e}"))?;
+    for p in existing {
+        let name = p.file_name().ok_or("bad file name")?;
+        // The same file name can come from two folders (two realmlist.wtf); the first copy wins within a second.
+        let target = dir.join(name);
+        if target.exists() {
+            continue;
+        }
+        fs::copy(p, &target).map_err(|e| format!("Could not back up {}: {e}", p.display()))?;
+    }
+    // Keep the newest ten; names are unix seconds, so a numeric sort is chronological.
+    let mut all: Vec<u64> = fs::read_dir(&root)
+        .map(|rd| rd.flatten().filter_map(|e| e.file_name().to_str()?.parse().ok()).collect())
+        .unwrap_or_default();
+    all.sort_unstable();
+    while all.len() > 10 {
+        let old = all.remove(0);
+        let _ = fs::remove_dir_all(root.join(old.to_string()));
+    }
+    Ok(Some(dir))
 }
 
 #[cfg(test)]

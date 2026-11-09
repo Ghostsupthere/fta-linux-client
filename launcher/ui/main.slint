@@ -14,6 +14,20 @@ global Pal {
     out property <color> warn: #ffd98a;
 }
 
+export struct CheckRow {
+    // 0 fine, 1 worth a look, 2 a problem
+    level: int,
+    name: string,
+    detail: string,
+}
+
+export struct ChangeRow {
+    // 0 release heading, 1 lead-in, 2 paragraph, 3 bullet
+    kind: int,
+    text: string,
+    sub: string,
+}
+
 export struct SettingRow {
     key: string,
     label: string,
@@ -53,7 +67,7 @@ component GlassButton inherits Rectangle {
     background: primary ? (ta.pressed ? Pal.gold-lo : (ta.has-hover ? Pal.gold-hi : Pal.gold)) : (ta.has-hover ? #ffffff30 : #ffffff1c);
     animate background { duration: 140ms; }
     drop-shadow-blur: primary && enabled ? 18px : 0px;
-    drop-shadow-color: #e8b84a55;
+    drop-shadow-color: primary && enabled ? #e8b84a55 : transparent;
     drop-shadow-offset-y: 4px;
     Rectangle {
         border-radius: parent.border-radius;
@@ -73,13 +87,14 @@ component GlassButton inherits Rectangle {
 
 component PresetPill inherits Rectangle {
     in property <string> label;
+    in property <bool> active: false;
     callback clicked;
     height: 30px;
     width: t.preferred-width + 28px;
     border-radius: 15px;
-    background: ta.pressed ? #3b78e755 : (ta.has-hover ? #3b78e733 : #ffffff14);
+    background: active ? #e8b84a40 : (ta.pressed ? #3b78e755 : (ta.has-hover ? #3b78e733 : #ffffff14));
     border-width: 1px;
-    border-color: ta.has-hover ? Pal.blue : Pal.line;
+    border-color: active ? Pal.gold : (ta.has-hover ? Pal.blue : Pal.line);
     animate background, border-color { duration: 120ms; }
     t := Text { text: root.label; color: Pal.text; font-size: 13px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
     ta := TouchArea { clicked => { root.clicked(); } }
@@ -136,14 +151,80 @@ component Section inherits Text {
     letter-spacing: 1.5px;
 }
 
+component Field inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder;
+    in property <bool> invalid: false;
+    callback edited(string);
+    height: 44px;
+    border-radius: 12px;
+    background: #00000045;
+    border-width: 1px;
+    border-color: root.invalid ? #ff8a80 : (input.has-focus ? Pal.gold : Pal.line);
+    animate border-color { duration: 120ms; }
+    Text {
+        x: 14px;
+        width: parent.width - 28px;
+        text: root.placeholder;
+        visible: root.text == "";
+        color: Pal.text-dim;
+        font-size: 15px;
+        vertical-alignment: center;
+    }
+    input := TextInput {
+        x: 14px;
+        width: parent.width - 28px;
+        height: parent.height;
+        text <=> root.text;
+        color: Pal.text;
+        font-size: 15px;
+        vertical-alignment: center;
+        single-line: true;
+        selection-background-color: #3b78e7a0;
+        selection-foreground-color: #ffffff;
+        edited => { root.edited(self.text); }
+    }
+}
+
+// Status text on the left, Reset and Apply on the right; shared by the Game and Settings pages.
+component ApplyBar inherits HorizontalLayout {
+    in property <string> message;
+    in property <bool> dirty;
+    in property <bool> blocked;
+    in property <bool> can-apply: true;
+    callback reset;
+    callback apply;
+    spacing: 12px;
+    alignment: end;
+    Text {
+        text: root.message;
+        color: root.dirty ? Pal.warn : Pal.text-dim;
+        font-size: 13px;
+        vertical-alignment: center;
+        overflow: elide;
+        horizontal-stretch: 1;
+    }
+    GlassButton { width: 130px; height: 44px; primary: false; label: "Reset"; enabled: root.dirty; clicked => { root.reset(); } }
+    GlassButton { width: 150px; height: 44px; label: "Apply"; enabled: root.dirty && !root.blocked && root.can-apply; clicked => { root.apply(); } }
+}
+
+component StatusDot inherits Rectangle {
+    in property <int> level;
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    background: level == 0 ? #5ad18a : (level == 1 ? #ffd98a : #ff6b6b);
+}
+
 export component MainWindow inherits Window {
     // Frameless window with a transparent corner area; needs a compositing window manager.
     no-frame: true;
     background: transparent;
     width: 1000px;
-    height: 620px;
+    height: 640px;
     title: "From The Ashes";
 
+    // 0 Play, 1 Game, 2 Settings, 3 Diagnostics
     in-out property <int> tab: 0;
 
     // Play page
@@ -151,6 +232,41 @@ export component MainWindow inherits Window {
     in property <string> subline;
     in property <bool> client-found: true;
     callback play;
+
+    // Updates. 0 nothing to show, 1 checking, 2 available, 3 asking for confirmation, 4 working, 5 failed
+    in property <int> update-state: 0;
+    in property <string> update-text;
+    in property <string> update-notes;
+    in property <string> update-title;
+    in property <float> update-progress: 0;
+    in property <[ChangeRow]> changelog;
+    in property <string> changelog-status;
+    callback check-update;
+    callback ask-update;
+    callback cancel-ask;
+    callback start-update;
+
+    // Game page
+    in-out property <string> game-realm;
+    in-out property <string> game-resolution;
+    in property <bool> game-windowed;
+    in property <bool> game-vsync;
+    in property <int> game-msaa: 1;
+    in property <[string]> resolution-presets;
+    in property <[int]> msaa-choices;
+    in property <string> game-problem;
+    in property <bool> game-realm-bad;
+    in property <bool> game-resolution-bad;
+    in property <bool> game-dirty;
+    in property <string> game-status;
+    callback game-realm-edited(string);
+    callback game-resolution-edited(string);
+    callback game-pick-resolution(string);
+    callback game-toggle-windowed;
+    callback game-toggle-vsync;
+    callback game-set-msaa(int);
+    callback apply-game;
+    callback reset-game;
 
     // Settings page
     in-out property <[SettingRow]> settings;
@@ -163,12 +279,31 @@ export component MainWindow inherits Window {
     callback reload-settings;
     callback load-preset(int);
 
+    // Diagnostics page
+    in property <[CheckRow]> checks;
+    in property <string> report-text;
+    in property <bool> diag-busy: false;
+    in property <string> diag-status;
+    callback run-diagnostics;
+    callback save-report;
+    callback report-copied;
+
+    public function copy-report() {
+        report-input.select-all();
+        report-input.copy();
+        report-input.clear-selection();
+        root.report-copied();
+    }
+
     // Window
     callback close-requested;
     callback minimize-requested;
     callback drag-window;
     // Opens one of the launcher's fixed links in the user's browser (the Rust side checks the URL).
     callback open-link(string);
+
+    // Holds the report so the Copy button can use the system clipboard; one transparent pixel, never seen.
+    report-input := TextInput { x: 0px; y: 0px; width: 1px; height: 1px; text: root.report-text; read-only: true; color: transparent; wrap: no-wrap; }
 
     shell := Rectangle {
         border-radius: 20px;
@@ -254,37 +389,106 @@ export component MainWindow inherits Window {
                 HorizontalLayout {
                     alignment: start;
                     Rectangle {
-                        background: #ffffff14; border-radius: 21px; width: 330px; height: 42px;
+                        background: #ffffff14; border-radius: 21px; width: 440px; height: 42px;
                         HorizontalLayout {
                             padding: 4px; spacing: 4px;
                             TabButton { label: "Play"; active: root.tab == 0; clicked => { root.tab = 0; } }
-                            TabButton { label: "Settings"; active: root.tab == 1; clicked => { root.tab = 1; } }
-                            TabButton { label: "Diagnostics"; active: root.tab == 2; clicked => { root.tab = 2; } }
+                            TabButton { label: "Game"; active: root.tab == 1; clicked => { root.tab = 1; } }
+                            TabButton { label: "Settings"; active: root.tab == 2; clicked => { root.tab = 2; } }
+                            TabButton { label: "Diagnostics"; active: root.tab == 3; clicked => { root.tab = 3; } }
                         }
                     }
                 }
 
                 // ---- Play page ----
-                if root.tab == 0 : VerticalLayout {
+                if root.tab == 0 : HorizontalLayout {
+                    spacing: 30px;
+                    VerticalLayout {
+                    horizontal-stretch: 1;
                     spacing: 14px;
                     alignment: center;
                     Text { text: root.headline; color: Pal.text; font-size: 28px; font-weight: 800; }
                     Text { text: root.subline; color: Pal.text-dim; font-size: 14px; wrap: word-wrap; }
-                    Rectangle { height: 10px; }
-                    HorizontalLayout {
+                    Rectangle { height: 6px; }
+
+                    // asking for confirmation before anything is installed
+                    if root.update-state == 3 : Rectangle {
+                        height: 150px;
+                        border-radius: 16px;
+                        background: #ffffff16;
+                        border-width: 1px;
+                        border-color: Pal.line;
+                        VerticalLayout {
+                            padding: 18px;
+                            spacing: 8px;
+                            Text { text: root.update-title; color: Pal.gold; font-size: 17px; font-weight: 800; }
+                            Text { text: root.update-notes; color: Pal.text; font-size: 13px; wrap: word-wrap; vertical-stretch: 1; overflow: elide; }
+                            HorizontalLayout {
+                                spacing: 10px;
+                                alignment: start;
+                                GlassButton { width: 170px; height: 40px; label: "Update now"; clicked => { root.start-update(); } }
+                                GlassButton { width: 120px; height: 40px; primary: false; label: "Not now"; clicked => { root.cancel-ask(); } }
+                            }
+                        }
+                    }
+
+                    // progress while downloading and installing
+                    if root.update-state == 4 : VerticalLayout {
+                        spacing: 8px;
+                        Rectangle {
+                            height: 10px;
+                            border-radius: 5px;
+                            background: #ffffff22;
+                            clip: true;
+                            Rectangle {
+                                x: 0; width: parent.width * max(0.04, min(1.0, root.update-progress)); height: parent.height;
+                                border-radius: 5px;
+                                background: Pal.gold;
+                                animate width { duration: 160ms; }
+                            }
+                        }
+                        Text { text: root.update-text; color: Pal.text-dim; font-size: 13px; overflow: elide; }
+                    }
+
+                    if root.update-state != 3 && root.update-state != 4 : HorizontalLayout {
                         alignment: start;
+                        spacing: 14px;
                         GlassButton {
                             width: 260px;
-                            label: "Play";
+                            label: root.update-state == 2 ? "Update" : "Play";
+                            enabled: root.client-found && !root.game-running;
+                            clicked => { if (root.update-state == 2) { root.ask-update(); } else { root.play(); } }
+                        }
+                        if root.update-state == 2 : GlassButton {
+                            width: 150px;
+                            primary: false;
+                            label: "Play anyway";
                             enabled: root.client-found && !root.game-running;
                             clicked => { root.play(); }
                         }
                     }
+
                     Text {
-                        text: root.game-running ? "The game is running." : "";
-                        color: Pal.warn; font-size: 13px;
+                        text: root.game-running ? "The game is running." : (root.update-state == 4 ? "" : root.update-text);
+                        visible: self.text != "" && root.update-state != 3;
+                        color: (root.update-state == 5 || root.game-running) ? Pal.warn : Pal.text-dim;
+                        font-size: 13px;
+                        wrap: word-wrap;
                     }
-                    Rectangle { height: 6px; }
+                    if root.update-state == 5 || root.update-state == 0 : Rectangle {
+                        height: 22px;
+                        HorizontalLayout {
+                            alignment: start;
+                            Text {
+                                text: "Check for updates";
+                                color: chk-ta.has-hover ? Pal.gold-hi : Pal.text-dim;
+                                font-size: 12px;
+                                font-weight: 600;
+                                chk-ta := TouchArea { clicked => { root.check-update(); } }
+                            }
+                        }
+                    }
+                    Rectangle { height: 2px; }
                     HorizontalLayout {
                         alignment: start;
                         spacing: 6px;
@@ -296,10 +500,138 @@ export component MainWindow inherits Window {
                             wiki-link := TouchArea { clicked => { root.open-link("https://wiki.downloadautism.com/"); } }
                         }
                     }
+                    }
+
+                    // ---- changelog (right) ----
+                    Rectangle {
+                        width: 400px;
+                        border-radius: 16px;
+                        background: #00000030;
+                        border-width: 1px;
+                        border-color: Pal.line;
+                        clip: true;
+                        VerticalLayout {
+                            padding: 16px;
+                            spacing: 8px;
+                            Section { text: "WHAT'S NEW"; height: 22px; }
+                            if root.changelog-status != "" : Text {
+                                text: root.changelog-status;
+                                color: Pal.text-dim;
+                                font-size: 13px;
+                                wrap: word-wrap;
+                            }
+                            log-area := Rectangle {
+                                vertical-stretch: 1;
+                                clip: true;
+                                log-flick := Flickable {
+                                    content-width: parent.width;
+                                    content-height: log-list.preferred-height;
+                                    log-list := VerticalLayout {
+                                        spacing: 5px;
+                                        padding-right: 12px;
+                                        for row in root.changelog : VerticalLayout {
+                                            spacing: 1px;
+                                            if row.kind == 0 : VerticalLayout {
+                                                padding-top: 10px;
+                                                spacing: 1px;
+                                                Text { text: row.text; color: Pal.gold; font-size: 17px; font-weight: 800; }
+                                                Text { text: row.sub; color: Pal.text-dim; font-size: 11px; wrap: word-wrap; }
+                                            }
+                                            if row.kind == 1 : Text { text: row.text; color: Pal.text; font-size: 13px; font-weight: 700; wrap: word-wrap; }
+                                            if row.kind == 2 : Text { text: row.text; color: Pal.text-dim; font-size: 12px; wrap: word-wrap; }
+                                            if row.kind == 3 : HorizontalLayout {
+                                                spacing: 6px;
+                                                padding-left: 8px;
+                                                Text { text: "•"; color: Pal.gold; font-size: 12px; vertical-alignment: top; }
+                                                Text { text: row.text; color: Pal.text-dim; font-size: 12px; wrap: word-wrap; horizontal-stretch: 1; }
+                                            }
+                                        }
+                                    }
+                                }
+                                if log-flick.content-height > log-flick.height : Rectangle {
+                                    x: parent.width - 5px;
+                                    width: 4px;
+                                    border-radius: 2px;
+                                    background: #ffffff55;
+                                    height: max(36px, log-flick.height * log-flick.height / log-flick.content-height);
+                                    y: -log-flick.content-y / (log-flick.content-height - log-flick.height) * (log-flick.height - self.height);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ---- Game page ----
+                if root.tab == 1 : VerticalLayout {
+                    spacing: 12px;
+                    HorizontalLayout {
+                        spacing: 34px;
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 8px;
+                            alignment: start;
+                            Section { text: "SERVER"; height: 24px; vertical-alignment: bottom; }
+                            Text { text: "Realm address"; color: Pal.text; font-size: 14px; font-weight: 600; }
+                            Field {
+                                text <=> root.game-realm;
+                                placeholder: "for example 192.168.1.5 or play.example.org";
+                                invalid: root.game-realm-bad;
+                                edited(t) => { root.game-realm-edited(t); }
+                            }
+                            Text { text: "Written to realmlist.wtf and Config.wtf together."; color: Pal.text-dim; font-size: 11px; }
+                            Rectangle { height: 8px; }
+                            Section { text: "ANTI-ALIASING"; height: 24px; vertical-alignment: bottom; }
+                            HorizontalLayout {
+                                spacing: 8px;
+                                alignment: start;
+                                for n in root.msaa-choices : PresetPill {
+                                    label: n == 1 ? "Off" : n + "x";
+                                    active: root.game-msaa == n;
+                                    clicked => { root.game-set-msaa(n); }
+                                }
+                            }
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 4px;
+                            alignment: start;
+                            Section { text: "DISPLAY"; height: 24px; vertical-alignment: bottom; }
+                            Check { label: "Windowed"; hint: "Off runs the game fullscreen"; checked: root.game-windowed; toggled => { root.game-toggle-windowed(); } }
+                            Check { label: "Vertical sync"; hint: "Stops tearing; may add input lag"; checked: root.game-vsync; toggled => { root.game-toggle-vsync(); } }
+                            Rectangle { height: 6px; }
+                            Text { text: "Resolution"; color: Pal.text; font-size: 14px; font-weight: 600; x: 12px; }
+                            Field {
+                                text <=> root.game-resolution;
+                                placeholder: "width x height, like 1920x1080";
+                                invalid: root.game-resolution-bad;
+                                edited(t) => { root.game-resolution-edited(t); }
+                            }
+                            Rectangle { height: 2px; }
+                            HorizontalLayout {
+                                spacing: 6px;
+                                alignment: start;
+                                for r in root.resolution-presets : PresetPill {
+                                    label: r;
+                                    active: root.game-resolution == r;
+                                    clicked => { root.game-pick-resolution(r); }
+                                }
+                            }
+                        }
+                    }
+                    Rectangle { vertical-stretch: 1; }
+                    if root.game-running : Text { text: "The game is running. Close it to change these."; color: Pal.warn; font-size: 13px; }
+                    ApplyBar {
+                        message: root.game-problem != "" ? root.game-problem : (root.game-status != "" ? root.game-status : (root.game-dirty ? "Unsaved changes." : "All saved."));
+                        dirty: root.game-dirty || root.game-problem != "";
+                        blocked: root.game-running;
+                        can-apply: root.game-problem == "";
+                        reset => { root.reset-game(); }
+                        apply => { root.apply-game(); }
+                    }
                 }
 
                 // ---- Settings page ----
-                if root.tab == 1 : VerticalLayout {
+                if root.tab == 2 : VerticalLayout {
                     spacing: 10px;
 
                     HorizontalLayout {
@@ -337,26 +669,62 @@ export component MainWindow inherits Window {
 
                     if root.game-running : Text { text: "The game is running. Close it to change settings."; color: Pal.warn; font-size: 13px; }
 
-                    HorizontalLayout {
-                        spacing: 12px;
-                        alignment: end;
-                        Text {
-                            text: root.status != "" ? root.status : (root.dirty ? "Unsaved changes." : "All settings saved.");
-                            color: root.dirty ? Pal.warn : Pal.text-dim;
-                            font-size: 13px;
-                            vertical-alignment: center;
-                            overflow: elide;
-                            horizontal-stretch: 1;
-                        }
-                        GlassButton { width: 130px; height: 44px; primary: false; label: "Reset"; enabled: root.dirty; clicked => { root.reload-settings(); } }
-                        GlassButton { width: 150px; height: 44px; label: "Apply"; enabled: root.dirty && !root.game-running; clicked => { root.apply-settings(); } }
+                    ApplyBar {
+                        message: root.status != "" ? root.status : (root.dirty ? "Unsaved changes." : "All settings saved.");
+                        dirty: root.dirty;
+                        blocked: root.game-running;
+                        reset => { root.reload-settings(); }
+                        apply => { root.apply-settings(); }
                     }
                 }
 
                 // ---- Diagnostics page ----
-                if root.tab == 2 : VerticalLayout {
-                    alignment: center;
-                    Text { text: "System check, logs and a diagnostics report will go here."; color: Pal.text-dim; font-size: 16px; horizontal-alignment: center; }
+                if root.tab == 3 : VerticalLayout {
+                    spacing: 10px;
+                    Rectangle {
+                        vertical-stretch: 1;
+                        clip: true;
+                        diag-flick := Flickable {
+                            content-width: parent.width;
+                            content-height: diag-list.preferred-height;
+                            diag-list := VerticalLayout {
+                                spacing: 6px;
+                                padding-right: 14px;
+                                if root.diag-busy : Text { text: "Checking..."; color: Pal.text-dim; font-size: 14px; }
+                                for c in root.checks : Rectangle {
+                                    height: 48px;
+                                    border-radius: 12px;
+                                    background: #ffffff10;
+                                    HorizontalLayout {
+                                        padding-left: 14px; padding-right: 14px; spacing: 12px;
+                                        StatusDot { level: c.level; y: (parent.height - self.height) / 2; }
+                                        VerticalLayout {
+                                            alignment: center;
+                                            horizontal-stretch: 1;
+                                            Text { text: c.name; color: Pal.text; font-size: 13px; font-weight: 700; }
+                                            Text { text: c.detail; color: Pal.text-dim; font-size: 12px; overflow: elide; }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if diag-flick.content-height > diag-flick.height : Rectangle {
+                            x: parent.width - 6px;
+                            width: 4px;
+                            border-radius: 2px;
+                            background: #ffffff55;
+                            height: max(36px, diag-flick.height * diag-flick.height / diag-flick.content-height);
+                            y: -diag-flick.content-y / (diag-flick.content-height - diag-flick.height) * (diag-flick.height - self.height);
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        alignment: end;
+                        Text { text: root.diag-status; color: Pal.text-dim; font-size: 13px; vertical-alignment: center; overflow: elide; horizontal-stretch: 1; }
+                        GlassButton { width: 150px; height: 44px; primary: false; label: "Check again"; enabled: !root.diag-busy; clicked => { root.run-diagnostics(); } }
+                        GlassButton { width: 150px; height: 44px; primary: false; label: "Save report"; enabled: !root.diag-busy; clicked => { root.save-report(); } }
+                        GlassButton { width: 150px; height: 44px; label: "Copy report"; enabled: !root.diag-busy; clicked => { root.copy-report(); } }
+                    }
                 }
             }
         }
