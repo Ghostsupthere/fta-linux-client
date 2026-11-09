@@ -9,7 +9,7 @@ global Pal {
     out property <color> blue: #3b78e7;
     out property <color> text: #f2f6ff;
     out property <color> text-dim: #c3d2f0b8;
-    out property <color> glass: #0a1a40a8;
+    out property <color> glass: #0a1a4f7a;
     out property <color> line: #ffffff2a;
     out property <color> warn: #ffd98a;
 }
@@ -317,7 +317,7 @@ export component MainWindow inherits Window {
             image-fit: cover;
         }
         // soft vignette so text stays readable
-        Rectangle { background: @linear-gradient(180deg, #00000066 0%, #00000000 35%, #00000099 100%); }
+        Rectangle { background: @linear-gradient(180deg, #00000030 0%, #00000000 30%, #0000004a 100%); }
 
         // ---- header (drag area, logo, window buttons) ----
         Rectangle {
@@ -338,20 +338,20 @@ export component MainWindow inherits Window {
                     alignment: end;
                     Rectangle {
                         width: 78px; height: 32px; border-radius: 16px;
-                        background: wiki-ta.has-hover ? Pal.gold : #ffffff1c;
+                        background: wiki-ta.has-hover ? Pal.gold : #0a1a40b0;
                         animate background { duration: 120ms; }
                         Text { text: "Wiki ↗"; color: wiki-ta.has-hover ? Pal.on-gold : Pal.text; font-size: 13px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
                         wiki-ta := TouchArea { clicked => { root.open-link("https://wiki.downloadautism.com/"); } }
                     }
                     Rectangle {
                         width: 32px; height: 32px; border-radius: 16px;
-                        background: min-ta.has-hover ? #ffffff33 : #ffffff1c;
+                        background: min-ta.has-hover ? #ffffff44 : #0a1a40b0;
                         Text { text: "–"; color: Pal.text; font-size: 18px; horizontal-alignment: center; vertical-alignment: center; }
                         min-ta := TouchArea { clicked => { root.minimize-requested(); } }
                     }
                     Rectangle {
                         width: 32px; height: 32px; border-radius: 16px;
-                        background: close-ta.has-hover ? #e5484d : #ffffff1c;
+                        background: close-ta.has-hover ? #e5484d : #0a1a40b0;
                         animate background { duration: 120ms; }
                         Text { text: "✕"; color: Pal.text; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
                         close-ta := TouchArea { clicked => { root.close-requested(); } }

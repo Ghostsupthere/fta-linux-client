@@ -102,6 +102,8 @@ Tested: Arch/CachyOS (played), Debian 13 and Ubuntu 24.04 with a source-built SD
 start in containers without a GPU). The Fedora and openSUSE package names come from those distributions'
 package lists and have not been run; if a name is wrong, install the library that `play.sh --check` reports.
 The maintainer's SDL3 is 3.4.x; 3.2.x loads but has not been played.
+The launcher has only been run on Arch/CachyOS under Wayland (KDE). It is untested on X11 and on other
+distributions; if it does not open, `FTA-Linux/play.sh` starts the game without it.
 
 ## Settings
 

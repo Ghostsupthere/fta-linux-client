@@ -117,7 +117,7 @@ pub struct Feed {
     pub notes: Vec<Note>,
 }
 
-const NOTES_SHOWN: usize = 4;
+const NOTES_SHOWN: usize = 3;
 
 /// Looks up the newest releases: the update candidate and the changelog come from one request.
 pub fn fetch_feed() -> Result<Feed, String> {
