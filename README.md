@@ -1,10 +1,6 @@
 # From The Ashes: native Linux client
 
-A native Linux client (no Wine) for **From The Ashes**, an AzerothCore repack.
-It installs into your existing From The Ashes client folder, reuses that folder's game data, and leaves the
-Windows client untouched. It renders through dxvk-native (Direct3D 9 on Vulkan) with SDL3 for the window,
-input and audio, and includes the WarcraftXL features From The Ashes uses: modern models and textures,
-collection armor, the improved world renderer and the extra interface tools.
+A native Linux client (no Wine) for **From The Ashes**
 
 This repository holds the installer and launcher, and the **[Releases](https://github.com/Ghostsupthere/fta-linux-client/releases/latest)**
 page has the downloads. The client's **source code** is in
@@ -13,12 +9,11 @@ client with the Linux platform layer and the WarcraftXL ports); the feature-by-f
 [docs/WXL-NATIVE-PORT.md](https://github.com/Ghostsupthere/fta-wd-ix-linux-native/blob/main/docs/WXL-NATIVE-PORT.md).
 
 > The client is not at proven parity with the Windows client. Some features are confirmed in game, others are
-> implemented but not yet checked, and a few are off by default. Report problems with the crash file from
-> `Errors/` in your client folder.
+> implemented but not yet checked, and a few are off by default. 
 
 ## Requirements
 
-- A From The Ashes client folder (the one containing `Wow.exe`, `Data` and `Interface`)
+- A From The Ashes client folder
 - Linux x86-64 with a Vulkan-capable GPU and driver
 - SDL3 (3.2 or newer), libcurl, ALSA and the PulseAudio client libraries. The installer checks for these and
   can install them (see the distribution notes below). glibc, the C++ runtime, xvidcore and dxvk-native are
@@ -145,31 +140,9 @@ Delete `Wow64` and the `FTA-Linux` folder from your client folder, and
 `~/.local/share/applications/fta-linux-client.desktop` if you added the menu shortcut. The offline shader packs
 in `Utils/WarcraftXL/visuals/` are harmless to keep.
 
-## Releasing (maintainers)
+## Releasing
 
-The binary parts are built in the [source tree](https://github.com/Ghostsupthere/fta-wd-ix-linux-native) and packaged here:
-
-```
-# in the source tree, after building bin/Linux/Wow64:
-tools/make-linux-portable.sh                 # gathers the payload, then runs this repo's tools/package.sh
-gh release create vX.Y --repo OWNER/fta-linux-client dist/FTA-Linux-Installer.run dist/fta-linux-client.tar.gz dist/FTA-Linux-SHA256SUMS.txt
-```
-
-The addon fixes are built from two copies of the changed addon files (originals and fixed), each holding
-`Interface/AddOns/...`. SUMMARY_FILE has one `path<TAB>description` line per file; the installer shows these when
-it asks. Build them first: `tools/package.sh` bundles the folder from `dist/FTA-Addon-Fixes` (or `ADDON_FIXES_DIR`)
-into the installer, so there is no separate release file:
-
-```
-tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR dist README_FILE SUMMARY_FILE   # writes dist/FTA-Addon-Fixes/
-```
-
-The README and the per-file summaries for the current fixes are kept in `addon-fixes/` (`README.txt`, `summaries.tsv`); pass
-them as README_FILE and SUMMARY_FILE. Only these texts live in the repository, not the addon files themselves.
-
-`tools/package.sh PAYLOAD_DIR [OUT_DIR]` builds the archive, the self-extracting installer and the checksums
-from a payload directory (its layout is described in the script). The shader packs in the payload are derived
-from the client's own shaders; they ship in release files, not in this repository.
+The binary parts are built in the [source tree](https://github.com/Ghostsupthere/fta-wd-ix-linux-native) and packaged here
 
 ## Layout
 
@@ -179,26 +152,3 @@ from the client's own shaders; they ship in release files, not in this repositor
 | `installer/installer-header.sh` | The one-click installer's script part (the payload is appended at build time) |
 | `tools/package.sh` | Builds the release files from a payload |
 | `tools/make-addon-fixes.sh` | Builds the addon-fixes folder (`fixes.manifest`, patches, fixed files) that `package.sh` bundles into the installer |
-
-## Credits
-
-- **From The Ashes** is the server this client is made for.
-- The client is built on **wowdecomp**, the C++ reconstruction of the
-  3.3.5a client, and the forks of it.
-- [dxvk](https://github.com/doitsujin/dxvk) and SDL3, which it renders and runs through.
-- **The World of Warcraft community**: the modders, server developers, tool authors and players whose years of work
-  make projects like this possible. Thank you.
-
-## License
-
-The installer, launcher and packaging scripts in this repository are licensed under the **GNU General Public
-License, version 3 or (at your option) any later version** (`LICENSE`). The client in the release files includes
-WarcraftXL modules that are GPL-3.0-or-later, and bundles glibc, the C++ runtime, xvidcore and dxvk-native, each
-under its own license.
-
-This project is free to use, share and build on. **No Blizzard game assets or game data are included** in this
-repository or in the release files: no MPQ archives, models, textures, sounds, databases or interface files. You need
-your own From The Ashes client folder, and the game data in it remains Blizzard's. The one kind of derived file the
-releases carry is the optional offline shader packs (`Utils/WarcraftXL/visuals/*.pack`): they are generated from shader
-code in a client's own files with WarcraftXL's patches, and without them the features that use them (surface lights,
-layered WMO materials, grass motion) stay off.
