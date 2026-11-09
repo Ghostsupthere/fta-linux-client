@@ -39,7 +39,7 @@ to install any missing system libraries (it asks for your password), adds **From
 applications menu and offers to start the game. Run it again at any time to update.
 
 **Addon fixes.** The installer carries a few small fixes for addons in the base client (ElvUI chat, the ElvUI bag
-quest icon and mail skin, and Questie's server bridge and world map icons). It lists each file it would change, with a one-line reason, and
+quest icon and mail skin, Questie's server bridge and world map icons, and the Ashen Bot Upgrade tooltip). It lists each file it would change, with a one-line reason, and
 asks first. A file is replaced only if it is the version the fix was made for; otherwise the patch is applied if it
 fits (this needs the `patch` tool), and otherwise the file is left alone. Originals are kept in
 `FTA-Linux/addon-fix-backup/`. Use `--no-fixes` to skip them, or `--fixes PATH` to apply another fixes folder or

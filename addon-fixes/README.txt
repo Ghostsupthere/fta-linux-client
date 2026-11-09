@@ -1,7 +1,8 @@
 FTA addon fixes
 ===============
 
-Seven small Lua fixes for addons in the From The Ashes base client (three files in ElvUI, four in Questie-335).
+Eight small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
+four in Questie-335).
 They are optional and independent of the Linux client: they apply to the Interface folder on any platform.
 Close the game before copying.
 
@@ -63,6 +64,20 @@ Close the game before copying.
    Fix: it indexes the table directly.
    Status: confirmed in play together with fixes 4 to 6.
 
+8. AshenBotUpgrade 1.3.4, AshenBotUpgrade.lua: tooltip feedback and caster wand upgrades
+   Symptom: hovering an item sometimes showed nothing, with no way to tell "no upgrade" from "not checked", and a
+   clearly better wand was never reported as an upgrade for a caster bot.
+   Cause: "No bot upgrade found" was hidden by DB.showEmpty, which defaulted to off. Separately, a weapon's damage
+   counted as a stat in HasRoleScorableStats, so every weapon, even a plain wand, was kept out of the item-level
+   fallback; and no caster profile weighted ranged weapon damage, so wand damage never changed the score.
+   Fix: showEmpty defaults to on (saves that already stored "off" are switched on once, and /abu showempty still
+   toggles it); the empty line is only shown for gear, not potions or reagents. Weapon damage no longer counts as a
+   stat for the fallback, and the 12 wand-capable caster and healer profiles (Mage, Priest, Warlock) get a small
+   ranged weapon damage weight.
+   Note: the fallback now applies to every statless weapon. A statless melee weapon with a higher item level but lower
+   damage can be shown as an upgrade; weapons with real stats are scored as before.
+   Status: tooltip lines confirmed in play; a wand upgrade was not re-tested after the change.
+
 Install
 -------
 Option 0, with the installer: it carries these fixes. It lists the files it will change, asks, backs the originals
@@ -70,8 +85,8 @@ up under FTA-Linux/addon-fix-backup/ and applies the fixes: a file is replaced o
 fixes were made for, otherwise the patch is applied if it fits (needs the "patch" tool), otherwise the file is left
 alone. Use --no-fixes to skip it, or --fixes PATH to point at a fixes folder.
 
-Option A, replace the seven files by hand. These are complete copies of the files as shipped in the base client, so
-only use this if your ElvUI is 6.09 and your Questie-335 matches the base client. Copy the Interface folder from
+Option A, replace the eight files by hand. These are complete copies of the files as shipped in the base client, so
+only use this if your ElvUI is 6.09 and your Questie-335 and AshenBotUpgrade match the base client. Copy the Interface folder from
 this archive over the Interface folder of your client folder (the one that holds Wow64 and Data).
 
 Option B, apply the patches by hand. Works with other versions of those files if the surrounding lines match. From your

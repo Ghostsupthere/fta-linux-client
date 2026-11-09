@@ -1,3 +1,4 @@
+Interface/AddOns/AshenBotUpgrade/AshenBotUpgrade.lua	Ashen Bot Upgrade: tooltip says when there is no upgrade; caster wand upgrades are detected
 Interface/AddOns/ElvUI/Media/SharedMedia.lua	ElvUI: the quest-start icon in the bags drew an opaque white box
 Interface/AddOns/ElvUI/Modules/Chat/Chat.lua	ElvUI: a % in a server achievement message caused a format() error
 Interface/AddOns/ElvUI/Modules/Skins/Blizzard/Mail.lua	ElvUI: mail skin error when an attachment icon cannot be loaded
