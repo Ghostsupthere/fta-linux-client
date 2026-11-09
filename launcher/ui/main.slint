@@ -1,0 +1,364 @@
+// FTA Linux launcher UI. Alliance blue and gold, a frameless rounded window and a frosted panel over a
+// background picture. Data and actions come from the Rust side.
+
+global Pal {
+    out property <color> gold: #e8b84a;
+    out property <color> gold-hi: #f6cf70;
+    out property <color> gold-lo: #c4952a;
+    out property <color> on-gold: #0b1430;
+    out property <color> blue: #3b78e7;
+    out property <color> text: #f2f6ff;
+    out property <color> text-dim: #c3d2f0b8;
+    out property <color> glass: #0a1a40a8;
+    out property <color> line: #ffffff2a;
+    out property <color> warn: #ffd98a;
+}
+
+export struct SettingRow {
+    key: string,
+    label: string,
+    hint: string,
+    // Non-empty on the first row of a category: the heading drawn above it.
+    header: string,
+    checked: bool,
+}
+
+component TabButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> active;
+    callback clicked;
+    height: 34px;
+    border-radius: 17px;
+    background: active ? Pal.gold : (ta.has-hover ? #ffffff22 : transparent);
+    animate background { duration: 140ms; }
+    Text {
+        text: root.label;
+        color: root.active ? Pal.on-gold : Pal.text;
+        font-size: 14px;
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    ta := TouchArea { clicked => { root.clicked(); } }
+}
+
+component GlassButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> primary: true;
+    in property <bool> enabled: true;
+    callback clicked;
+    height: 52px;
+    border-radius: self.height / 2;
+    opacity: enabled ? 1.0 : 0.45;
+    background: primary ? (ta.pressed ? Pal.gold-lo : (ta.has-hover ? Pal.gold-hi : Pal.gold)) : (ta.has-hover ? #ffffff30 : #ffffff1c);
+    animate background { duration: 140ms; }
+    drop-shadow-blur: primary && enabled ? 18px : 0px;
+    drop-shadow-color: #e8b84a55;
+    drop-shadow-offset-y: 4px;
+    Rectangle {
+        border-radius: parent.border-radius;
+        border-width: primary ? 0px : 1px;
+        border-color: Pal.line;
+    }
+    Text {
+        text: root.label;
+        color: root.primary ? Pal.on-gold : Pal.text;
+        font-size: 18px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    ta := TouchArea { enabled: root.enabled; clicked => { root.clicked(); } }
+}
+
+component PresetPill inherits Rectangle {
+    in property <string> label;
+    callback clicked;
+    height: 30px;
+    width: t.preferred-width + 28px;
+    border-radius: 15px;
+    background: ta.pressed ? #3b78e755 : (ta.has-hover ? #3b78e733 : #ffffff14);
+    border-width: 1px;
+    border-color: ta.has-hover ? Pal.blue : Pal.line;
+    animate background, border-color { duration: 120ms; }
+    t := Text { text: root.label; color: Pal.text; font-size: 13px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
+    ta := TouchArea { clicked => { root.clicked(); } }
+}
+
+// Controlled checkbox: it shows `checked` and reports clicks; the owner flips the value.
+component Check inherits Rectangle {
+    in property <bool> checked;
+    in property <string> label;
+    in property <string> hint;
+    callback toggled;
+    height: 48px;
+    border-radius: 12px;
+    background: ta.has-hover ? #ffffff14 : transparent;
+    animate background { duration: 120ms; }
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 14px;
+        alignment: start;
+        Rectangle {
+            width: 22px;
+            height: 22px;
+            y: (root.height - 22px) / 2;
+            border-radius: 7px;
+            border-width: 2px;
+            border-color: root.checked ? Pal.gold : #ffffff88;
+            background: root.checked ? Pal.gold : transparent;
+            animate background, border-color { duration: 140ms; }
+            Text {
+                text: "✓";
+                visible: root.checked;
+                color: Pal.on-gold;
+                font-size: 15px;
+                font-weight: 800;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text { text: root.label; color: Pal.text; font-size: 14px; font-weight: 600; overflow: elide; }
+            Text { text: root.hint; color: Pal.text-dim; font-size: 11px; overflow: elide; visible: root.hint != ""; }
+        }
+    }
+    ta := TouchArea { clicked => { root.toggled(); } }
+}
+
+component Section inherits Text {
+    color: Pal.gold;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+export component MainWindow inherits Window {
+    // Frameless window with a transparent corner area; needs a compositing window manager.
+    no-frame: true;
+    background: transparent;
+    width: 1000px;
+    height: 620px;
+    title: "From The Ashes";
+
+    in-out property <int> tab: 0;
+
+    // Play page
+    in property <string> headline: "Ready to play";
+    in property <string> subline;
+    in property <bool> client-found: true;
+    callback play;
+
+    // Settings page
+    in-out property <[SettingRow]> settings;
+    in property <[string]> preset-names;
+    in-out property <bool> dirty: false;
+    in-out property <string> status: "";
+    in property <bool> game-running: false;
+    callback toggle-setting(int);
+    callback apply-settings;
+    callback reload-settings;
+    callback load-preset(int);
+
+    // Window
+    callback close-requested;
+    callback minimize-requested;
+    callback drag-window;
+    // Opens one of the launcher's fixed links in the user's browser (the Rust side checks the URL).
+    callback open-link(string);
+
+    shell := Rectangle {
+        border-radius: 20px;
+        clip: true;
+        background: #08122b;
+
+        Image {
+            source: @image-url("../assets/bg.jpg");
+            width: parent.width;
+            height: parent.height;
+            image-fit: cover;
+        }
+        // soft vignette so text stays readable
+        Rectangle { background: @linear-gradient(180deg, #00000066 0%, #00000000 35%, #00000099 100%); }
+
+        // ---- header (drag area, logo, window buttons) ----
+        Rectangle {
+            x: 0; y: 0; width: parent.width; height: 84px;
+            TouchArea { pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.drag-window(); } } }
+            HorizontalLayout {
+                padding-left: 34px; padding-right: 20px; padding-top: 22px; padding-bottom: 12px;
+                spacing: 14px;
+                // Placeholder logo: swapped for the real artwork by the theme.
+                VerticalLayout {
+                    alignment: center;
+                    Text { text: "FROM THE ASHES"; color: Pal.text; font-size: 26px; font-weight: 800; letter-spacing: 3px; }
+                    Text { text: "LINUX CLIENT"; color: Pal.gold; font-size: 11px; font-weight: 700; letter-spacing: 4px; }
+                }
+                Rectangle { horizontal-stretch: 1; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: end;
+                    Rectangle {
+                        width: 78px; height: 32px; border-radius: 16px;
+                        background: wiki-ta.has-hover ? Pal.gold : #ffffff1c;
+                        animate background { duration: 120ms; }
+                        Text { text: "Wiki ↗"; color: wiki-ta.has-hover ? Pal.on-gold : Pal.text; font-size: 13px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                        wiki-ta := TouchArea { clicked => { root.open-link("https://wiki.downloadautism.com/"); } }
+                    }
+                    Rectangle {
+                        width: 32px; height: 32px; border-radius: 16px;
+                        background: min-ta.has-hover ? #ffffff33 : #ffffff1c;
+                        Text { text: "–"; color: Pal.text; font-size: 18px; horizontal-alignment: center; vertical-alignment: center; }
+                        min-ta := TouchArea { clicked => { root.minimize-requested(); } }
+                    }
+                    Rectangle {
+                        width: 32px; height: 32px; border-radius: 16px;
+                        background: close-ta.has-hover ? #e5484d : #ffffff1c;
+                        animate background { duration: 120ms; }
+                        Text { text: "✕"; color: Pal.text; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
+                        close-ta := TouchArea { clicked => { root.close-requested(); } }
+                    }
+                }
+            }
+        }
+
+        // ---- frosted glass panel ----
+        panel := Rectangle {
+            x: 40px; y: 96px;
+            width: parent.width - 80px;
+            height: parent.height - 96px - 40px;
+            border-radius: 22px;
+            clip: true;
+            // Same picture, pre-blurred, aligned with the sharp one so it reads as frosted glass.
+            Image {
+                source: @image-url("../assets/bg-blur.jpg");
+                x: -panel.x; y: -panel.y;
+                width: shell.width; height: shell.height;
+                image-fit: cover;
+            }
+            Rectangle { background: Pal.glass; }
+            Rectangle {
+                border-radius: 22px;
+                border-width: 1px;
+                border-color: Pal.line;
+            }
+
+            VerticalLayout {
+                padding: 26px;
+                spacing: 16px;
+
+                // pill tabs
+                HorizontalLayout {
+                    alignment: start;
+                    Rectangle {
+                        background: #ffffff14; border-radius: 21px; width: 330px; height: 42px;
+                        HorizontalLayout {
+                            padding: 4px; spacing: 4px;
+                            TabButton { label: "Play"; active: root.tab == 0; clicked => { root.tab = 0; } }
+                            TabButton { label: "Settings"; active: root.tab == 1; clicked => { root.tab = 1; } }
+                            TabButton { label: "Diagnostics"; active: root.tab == 2; clicked => { root.tab = 2; } }
+                        }
+                    }
+                }
+
+                // ---- Play page ----
+                if root.tab == 0 : VerticalLayout {
+                    spacing: 14px;
+                    alignment: center;
+                    Text { text: root.headline; color: Pal.text; font-size: 28px; font-weight: 800; }
+                    Text { text: root.subline; color: Pal.text-dim; font-size: 14px; wrap: word-wrap; }
+                    Rectangle { height: 10px; }
+                    HorizontalLayout {
+                        alignment: start;
+                        GlassButton {
+                            width: 260px;
+                            label: "Play";
+                            enabled: root.client-found && !root.game-running;
+                            clicked => { root.play(); }
+                        }
+                    }
+                    Text {
+                        text: root.game-running ? "The game is running." : "";
+                        color: Pal.warn; font-size: 13px;
+                    }
+                    Rectangle { height: 6px; }
+                    HorizontalLayout {
+                        alignment: start;
+                        spacing: 6px;
+                        Text { text: "New here? Guides, commands and class changes are on the"; color: Pal.text-dim; font-size: 13px; vertical-alignment: center; }
+                        Text {
+                            text: "FTA Wiki ↗";
+                            color: wiki-link.has-hover ? Pal.gold-hi : Pal.gold;
+                            font-size: 13px; font-weight: 700; vertical-alignment: center;
+                            wiki-link := TouchArea { clicked => { root.open-link("https://wiki.downloadautism.com/"); } }
+                        }
+                    }
+                }
+
+                // ---- Settings page ----
+                if root.tab == 1 : VerticalLayout {
+                    spacing: 10px;
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: start;
+                        Text { text: "Presets"; color: Pal.text-dim; font-size: 13px; vertical-alignment: center; }
+                        for name[i] in root.preset-names : PresetPill { label: name; clicked => { root.load-preset(i); } }
+                    }
+
+                    // scrolling list with a thin scroll bar
+                    list-area := Rectangle {
+                        vertical-stretch: 1;
+                        clip: true;
+                        flick := Flickable {
+                            content-width: parent.width;
+                            content-height: list.preferred-height;
+                            list := VerticalLayout {
+                                spacing: 2px;
+                                padding-right: 14px;
+                                for row[i] in root.settings : VerticalLayout {
+                                    if row.header != "" : Section { text: row.header; height: 30px; vertical-alignment: bottom; }
+                                    Check { label: row.label; hint: row.hint; checked: row.checked; toggled => { root.toggle-setting(i); } }
+                                }
+                            }
+                        }
+                        if flick.content-height > flick.height : Rectangle {
+                            x: parent.width - 6px;
+                            width: 4px;
+                            border-radius: 2px;
+                            background: #ffffff55;
+                            height: max(36px, flick.height * flick.height / flick.content-height);
+                            y: -flick.content-y / (flick.content-height - flick.height) * (flick.height - self.height);
+                        }
+                    }
+
+                    if root.game-running : Text { text: "The game is running. Close it to change settings."; color: Pal.warn; font-size: 13px; }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        alignment: end;
+                        Text {
+                            text: root.status != "" ? root.status : (root.dirty ? "Unsaved changes." : "All settings saved.");
+                            color: root.dirty ? Pal.warn : Pal.text-dim;
+                            font-size: 13px;
+                            vertical-alignment: center;
+                            overflow: elide;
+                            horizontal-stretch: 1;
+                        }
+                        GlassButton { width: 130px; height: 44px; primary: false; label: "Reset"; enabled: root.dirty; clicked => { root.reload-settings(); } }
+                        GlassButton { width: 150px; height: 44px; label: "Apply"; enabled: root.dirty && !root.game-running; clicked => { root.apply-settings(); } }
+                    }
+                }
+
+                // ---- Diagnostics page ----
+                if root.tab == 2 : VerticalLayout {
+                    alignment: center;
+                    Text { text: "System check, logs and a diagnostics report will go here."; color: Pal.text-dim; font-size: 16px; horizontal-alignment: center; }
+                }
+            }
+        }
+    }
+}
