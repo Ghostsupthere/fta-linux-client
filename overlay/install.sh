@@ -30,9 +30,9 @@ done
 [[ -d $here/payload ]] || fail 'payload folder is missing next to install.sh'
 
 # Overwrite our own files (Wow64, FTA-Linux); keep anything else that exists unless --force. The backups the
-# launcher and the installer made of the person's own files survive a reinstall.
+# launcher and the installer made of the person's own files, and their debug switches, survive a reinstall.
 if [[ -d $target/FTA-Linux ]]; then
-    find "$target/FTA-Linux" -mindepth 1 -maxdepth 1 ! -name settings-backup ! -name addon-fix-backup -exec rm -rf -- {} +
+    find "$target/FTA-Linux" -mindepth 1 -maxdepth 1 ! -name settings-backup ! -name addon-fix-backup ! -name debug.env -exec rm -rf -- {} +
 else
     mkdir -p -- "$target/FTA-Linux"
 fi

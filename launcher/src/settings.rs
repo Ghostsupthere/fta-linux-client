@@ -1,7 +1,7 @@
 //! The settings model behind the Settings page: loads the current values from the client's files, tracks edits,
 //! and writes only what changed, with a backup of the originals.
 
-use crate::catalog::{bool_text, parse_bool, PRESETS, SETTINGS};
+use crate::catalog::{PRESETS, SETTINGS};
 use crate::cfgfile::{write_atomic, Doc, Style};
 use crate::catalog::Store as Where;
 use std::fs;
@@ -21,16 +21,25 @@ fn cfg_path(client: &Path) -> PathBuf {
 fn wtf_path(client: &Path) -> PathBuf {
     client.join("WTF/Config.wtf")
 }
+/// The debug switches `play.sh` exports to the game.
+pub fn env_path(client: &Path) -> PathBuf {
+    client.join("FTA-Linux/debug.env")
+}
 
 impl Settings {
     pub fn load(client: &Path) -> Settings {
         let cfg = Doc::load(Style::Cfg, &cfg_path(client));
         let wtf = Doc::load(Style::Wtf, &wtf_path(client));
+        let env = Doc::load(Style::Cfg, &env_path(client));
         let saved: Vec<bool> = SETTINGS
             .iter()
             .map(|s| {
-                let doc = if s.store == Where::Cfg { &cfg } else { &wtf };
-                doc.get(s.key).map(|v| parse_bool(&v)).unwrap_or(s.default)
+                let doc = match s.store {
+                    Where::Cfg => &cfg,
+                    Where::Wtf => &wtf,
+                    Where::Env => &env,
+                };
+                doc.get(s.key).map(|v| s.is_on(&v)).unwrap_or(s.default)
             })
             .collect();
         Settings { client: client.to_path_buf(), values: saved.clone(), saved }
@@ -66,21 +75,24 @@ impl Settings {
         let wtf_file = wtf_path(&self.client);
         let mut cfg = Doc::load(Style::Cfg, &cfg_file);
         let mut wtf = Doc::load(Style::Wtf, &wtf_file);
-        let (mut cfg_changed, mut wtf_changed) = (false, false);
+        let env_file = env_path(&self.client);
+        let mut env = Doc::load(Style::Cfg, &env_file);
+        let (mut cfg_changed, mut wtf_changed, mut env_changed) = (false, false, false);
         for (i, s) in SETTINGS.iter().enumerate() {
             if self.values[i] == self.saved[i] {
                 continue;
             }
-            let value = bool_text(self.values[i]);
-            if s.store == Where::Cfg {
-                cfg_changed |= cfg.set(s.key, value);
-            } else {
-                wtf_changed |= wtf.set(s.key, value);
+            let value = s.text(self.values[i]);
+            match s.store {
+                Where::Cfg => cfg_changed |= cfg.set(s.key, value),
+                Where::Wtf => wtf_changed |= wtf.set(s.key, value),
+                Where::Env => env_changed |= env.set(s.key, value),
             }
         }
         let to_write: Vec<(&Path, &Doc, &str)> = [
             (cfg_changed, cfg_file.as_path(), &cfg, "WarcraftXL.cfg"),
             (wtf_changed, wtf_file.as_path(), &wtf, "Config.wtf"),
+            (env_changed, env_file.as_path(), &env, "debug.env"),
         ]
         .into_iter()
         .filter(|(changed, ..)| *changed)
@@ -89,6 +101,9 @@ impl Settings {
 
         let backup = self.backup(&to_write.iter().map(|(p, ..)| *p).collect::<Vec<_>>())?;
         for (path, doc, name) in &to_write {
+            if let Some(dir) = path.parent() {
+                let _ = fs::create_dir_all(dir);
+            }
             write_atomic(path, &doc.to_text()).map_err(|e| format!("Could not write {name}: {e}"))?;
         }
         self.saved = self.values.clone();
@@ -187,6 +202,30 @@ mod tests {
         // reloading shows the saved values
         let again = Settings::load(&dir);
         assert!(!again.values[god] && !again.values[threads]);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn debug_switches_go_to_debug_env_with_their_own_values() {
+        let dir = scratch("debugenv");
+        fs::create_dir_all(dir.join("FTA-Linux")).unwrap();
+        fs::write(dir.join("FTA-Linux/debug.env"), "# mine\nWXL_PROFILE_LOG=10\nWXL_SHADOW_MIN_INFLUENCES=1\n").unwrap();
+        let mut s = Settings::load(&dir);
+        let idx = |k: &str| SETTINGS.iter().position(|x| x.key == k).unwrap();
+        assert!(s.values[idx("WXL_PROFILE_LOG")], "a different non-off value still counts as on");
+        assert!(!s.values[idx("WXL_SHADOW_MIN_INFLUENCES")]);
+        assert!(!s.values[idx("WXL_FOG_TRACE")]);
+        s.toggle(idx("WXL_FOG_TRACE"));
+        s.toggle(idx("WXL_SHADOW_MIN_INFLUENCES"));
+        s.toggle(idx("scriptErrors"));
+        s.apply().unwrap();
+        assert_eq!(
+            fs::read_to_string(dir.join("FTA-Linux/debug.env")).unwrap(),
+            "# mine\nWXL_PROFILE_LOG=10\nWXL_SHADOW_MIN_INFLUENCES=0\nWXL_FOG_TRACE=1\n"
+        );
+        assert!(fs::read_to_string(dir.join("WTF/Config.wtf")).unwrap().contains("SET scriptErrors \"1\""));
+        let again = Settings::load(&dir);
+        assert!(again.values[idx("WXL_FOG_TRACE")] && again.values[idx("WXL_SHADOW_MIN_INFLUENCES")]);
         let _ = fs::remove_dir_all(&dir);
     }
 

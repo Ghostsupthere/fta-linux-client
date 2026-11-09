@@ -274,6 +274,18 @@ pub fn run(client: Option<&Path>, launcher_version: &str, update_note: &str) -> 
         ));
     }
 
+    // Debug switches left on slow the game down and fill the logs, so the report says which are set.
+    let on: Vec<String> = std::fs::read_to_string(client.join("FTA-Linux/debug.env"))
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|l| l.trim().split_once('='))
+        .filter(|(k, v)| !k.starts_with('#') && !matches!(v.trim(), "0" | ""))
+        .map(|(k, v)| format!("{}={}", k.trim(), v.trim()))
+        .collect();
+    if !on.is_empty() {
+        checks.push(check(Level::Warn, "Debug switches", format!("{} (Settings page, Debugging)", on.join(", "))));
+    }
+
     let log = latest_launch_log(client);
     finish(checks, launcher_version, update_note, Some(client), log)
 }

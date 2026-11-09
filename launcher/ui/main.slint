@@ -408,7 +408,13 @@ export component MainWindow inherits Window {
                     horizontal-stretch: 1;
                     spacing: 14px;
                     alignment: center;
-                    Text { text: root.headline; color: Pal.text; font-size: 28px; font-weight: 800; }
+                    Text {
+                        // An update waiting (or being installed) changes the headline; otherwise it is whatever the Rust side set.
+                        text: !root.client-found ? root.headline : (root.update-state == 2 || root.update-state == 3 ? "Update ready" : (root.update-state == 4 ? "Updating..." : root.headline));
+                        color: Pal.text;
+                        font-size: 28px;
+                        font-weight: 800;
+                    }
                     Text { text: root.subline; color: Pal.text-dim; font-size: 14px; wrap: word-wrap; }
                     Rectangle { height: 6px; }
 

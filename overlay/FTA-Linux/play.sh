@@ -65,6 +65,17 @@ if [[ $mode == check ]]; then
     exit 0
 fi
 
+# Debug switches chosen in the launcher's Settings page: FTA-Linux/debug.env holds KEY=VALUE lines. Only WXL_ and
+# FTA_ names with plain values are used, and a variable that is already set in the environment wins.
+if [[ -r $here/debug.env ]]; then
+    while IFS= read -r line || [[ -n $line ]]; do
+        line=${line%$'\r'}
+        if [[ $line =~ ^((WXL|FTA)_[A-Z0-9_]+)=([A-Za-z0-9._-]*)$ ]] && [[ -z ${!BASH_REMATCH[1]+x} ]]; then
+            export "${BASH_REMATCH[1]}=${BASH_REMATCH[3]}"
+        fi
+    done <"$here/debug.env"
+fi
+
 log=Logs/native-launch-$(date +%Y%m%d-%H%M%S)-$$.log
 printf 'FTA Linux launch log: %s\n' "$client/$log"
 status=0

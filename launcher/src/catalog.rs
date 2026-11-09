@@ -7,6 +7,8 @@ pub enum Store {
     Cfg,
     /// A game variable in `WTF/Config.wtf`.
     Wtf,
+    /// An environment variable for the game, kept in `FTA-Linux/debug.env` and exported by `play.sh`.
+    Env,
 }
 
 pub struct Setting {
@@ -16,13 +18,37 @@ pub struct Setting {
     pub label: &'static str,
     pub hint: &'static str,
     pub default: bool,
+    /// What is written when the box is ticked / cleared (`1` and `0` for the ordinary on/off settings).
+    pub on: &'static str,
+    pub off: &'static str,
+}
+
+impl Setting {
+    /// Whether `value`, as found in the file, counts as ticked.
+    pub fn is_on(&self, value: &str) -> bool {
+        match self.store {
+            Store::Env => value.trim() != self.off,
+            _ => parse_bool(value),
+        }
+    }
+
+    pub fn text(&self, on: bool) -> &'static str {
+        if on { self.on } else { self.off }
+    }
 }
 
 const fn s(key: &'static str, store: Store, category: &'static str, label: &'static str, hint: &'static str, default: bool) -> Setting {
-    Setting { key, store, category, label, hint, default }
+    Setting { key, store, category, label, hint, default, on: "1", off: "0" }
+}
+
+/// A debug switch (environment variable) that is off unless its value differs from `off`.
+const fn dbg(key: &'static str, label: &'static str, hint: &'static str, on: &'static str, off: &'static str) -> Setting {
+    Setting { key, store: Store::Env, category: DEBUG_CATEGORY, label, hint, default: false, on, off }
 }
 
 use Store::{Cfg, Wtf};
+
+const DEBUG_CATEGORY: &str = "DEBUGGING (takes effect at the next game start; logs go to Logs/)";
 
 pub const SETTINGS: &[Setting] = &[
     // ---- Visuals ----
@@ -60,6 +86,16 @@ pub const SETTINGS: &[Setting] = &[
     s("shadowCasterMinRadiusFilter", Wtf, "PERFORMANCE", "No shadows from small props", "Cups, bottles and small rocks stop casting shadows (game setting)", false),
     s("cullSubPixelDoodads", Wtf, "PERFORMANCE", "Skip tiny distant objects", "Objects under about 8 pixels are not drawn (game setting)", false),
     s("cullFogCutoff", Wtf, "PERFORMANCE", "Skip terrain past the fog", "May show a visible edge with some fog settings (game setting)", false),
+    // ---- Debugging: for finding problems; they write extra log lines or show errors, and cost some speed ----
+    s("scriptErrors", Wtf, DEBUG_CATEGORY, "Show Lua errors", "Addon errors pop up in the game instead of staying silent (game setting)", false),
+    s("scriptProfile", Wtf, DEBUG_CATEGORY, "Addon CPU profiling", "Lets addons measure their own CPU use; slows the UI a little (game setting)", false),
+    dbg("WXL_NATIVE_DIAGNOSTICS", "Asset and equipment trace", "Logs model, texture and equipment path decisions to the launch log", "1", "0"),
+    dbg("WXL_PROFILE_LOG", "Profiler summary every 5 seconds", "Logs frame time and timings per zone (water, particles, weather, ...) to the launch log", "5", "0"),
+    dbg("WXL_FOG_TRACE", "Fog and light pass trace", "Logs the state of the fog and light passes every 300 frames", "1", "0"),
+    dbg("FTA_TRACE_PORTRAIT", "Portrait camera trace", "Logs how character portrait and preview cameras are set up", "1", "0"),
+    dbg("FTA_TRACE_UNINVITE", "Party-error trace", "Logs where \"is not in your party\" errors come from", "1", "0"),
+    dbg("WXL_SAMPLE_PROFILE", "Call-stack sampling (developers)", "500 samples a second; kill -USR1 on the game writes Logs/samples.txt. Can slow or hang the game", "500", "0"),
+    dbg("WXL_SHADOW_MIN_INFLUENCES", "Old shadow shader choice (comparison)", "Brings back the stock shadow selection, so shields cast a wrong shadow again. Only to compare", "0", "1"),
 ];
 
 pub struct Preset {
@@ -108,6 +144,11 @@ pub const PRESETS: &[Preset] = &[
         ],
     },
     Preset {
+        name: "Debug logging",
+        hint: "Extra logging for a bug report: Lua errors shown, the asset trace and a profiler summary",
+        values: &[("scriptErrors", true), ("WXL_NATIVE_DIAGNOSTICS", true), ("WXL_PROFILE_LOG", true)],
+    },
+    Preset {
         name: "Safe mode",
         hint: "For troubleshooting: all threading and the newer effects off. Try this first if the game misbehaves",
         values: &[
@@ -125,9 +166,6 @@ pub fn parse_bool(value: &str) -> bool {
     !matches!(value.chars().next(), Some('0' | 'n' | 'N' | 'f' | 'F'))
 }
 
-pub fn bool_text(on: bool) -> &'static str {
-    if on { "1" } else { "0" }
-}
 
 #[cfg(test)]
 mod tests {

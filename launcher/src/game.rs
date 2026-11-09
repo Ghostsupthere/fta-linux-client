@@ -8,7 +8,7 @@ use crate::cfgfile::{write_atomic, Doc, Style};
 use crate::settings::backup_files;
 use std::path::{Path, PathBuf};
 
-pub const RESOLUTION_PRESETS: &[&str] = &["1280x720", "1600x900", "1920x1080", "2560x1440", "3840x2160"];
+pub const RESOLUTION_PRESETS: &[&str] = &["1280x720", "1600x900", "1920x1080", "2560x1440", "3440x1440"];
 /// Anti-aliasing choices: the game's `gxMultisample` is the sample count, 1 meaning off.
 pub const MSAA_CHOICES: &[u8] = &[1, 2, 4, 8];
 
