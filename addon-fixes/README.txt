@@ -78,6 +78,8 @@ Close the game before copying.
    damage can be shown as an upgrade; weapons with real stats are scored as before.
    Status: tooltip lines confirmed in play; a wand upgrade was not re-tested after the change.
 
+Credit: the Questie map-icon fixes (items 4b and 4c, 5, 6 and 7) are by Grandpa_Boris.
+
 Install
 -------
 Option 0, with the installer: it carries these fixes. It lists the files it will change, asks, backs the originals
