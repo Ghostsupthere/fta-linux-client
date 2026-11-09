@@ -135,6 +135,7 @@ fn run_diagnostics(weak: slint::Weak<MainWindow>, client: Option<std::path::Path
 fn check_for_update(weak: slint::Weak<MainWindow>, client: Option<std::path::PathBuf>, slot: Arc<Mutex<Option<updater::Release>>>) {
     let Some(client) = client else { return };
     if let Some(ui) = weak.upgrade() {
+        ui.set_update_retry(false);
         ui.set_update_state(1);
         ui.set_update_text("Checking for updates...".into());
         ui.set_changelog_status("Loading...".into());
@@ -178,6 +179,7 @@ fn install_update(
     cancel: Arc<AtomicBool>,
 ) {
     if let Some(ui) = weak.upgrade() {
+        ui.set_update_retry(false);
         ui.set_update_state(4);
         ui.set_update_progress(0.0);
         ui.set_update_text("Downloading...".into());
@@ -227,6 +229,7 @@ fn install_update(
                 }
                 Err(err) => {
                     ui.set_update_state(5);
+                    ui.set_update_retry(true);
                     ui.set_update_text(err.into());
                 }
             }
@@ -522,6 +525,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let (Some(ui), Some(dir), Some(rel)) = (weak.upgrade(), dir.clone(), slot.lock().unwrap().clone()) else { return };
             if client::game_running() {
                 ui.set_update_state(5);
+                ui.set_update_retry(true);
                 ui.set_update_text("The game is running. Close it, then try again.".into());
                 return;
             }

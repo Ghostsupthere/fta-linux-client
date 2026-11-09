@@ -236,6 +236,8 @@ export component MainWindow inherits Window {
     // Updates. 0 nothing to show, 1 checking, 2 available, 3 asking for confirmation, 4 working, 5 failed
     in property <int> update-state: 0;
     in property <string> update-text;
+    // After a failed update: the release is still known, so the button can try again.
+    in property <bool> update-retry: false;
     in property <string> update-notes;
     in property <string> update-title;
     in property <float> update-progress: 0;
@@ -410,7 +412,7 @@ export component MainWindow inherits Window {
                     alignment: center;
                     Text {
                         // An update waiting (or being installed) changes the headline; otherwise it is whatever the Rust side set.
-                        text: !root.client-found ? root.headline : (root.update-state == 2 || root.update-state == 3 ? "Update ready" : (root.update-state == 4 ? "Updating..." : root.headline));
+                        text: !root.client-found ? root.headline : (root.update-state == 2 || root.update-state == 3 || (root.update-state == 5 && root.update-retry) ? "Update ready" : (root.update-state == 4 ? "Updating..." : root.headline));
                         color: Pal.text;
                         font-size: 28px;
                         font-weight: 800;
@@ -462,11 +464,11 @@ export component MainWindow inherits Window {
                         spacing: 14px;
                         GlassButton {
                             width: 260px;
-                            label: root.update-state == 2 ? "Update" : "Play";
+                            label: root.update-state == 2 ? "Update" : (root.update-state == 5 && root.update-retry ? "Try again" : "Play");
                             enabled: root.client-found && !root.game-running;
-                            clicked => { if (root.update-state == 2) { root.ask-update(); } else { root.play(); } }
+                            clicked => { if (root.update-state == 2 || (root.update-state == 5 && root.update-retry)) { root.ask-update(); } else { root.play(); } }
                         }
-                        if root.update-state == 2 : GlassButton {
+                        if root.update-state == 2 || (root.update-state == 5 && root.update-retry) : GlassButton {
                             width: 150px;
                             primary: false;
                             label: "Play anyway";

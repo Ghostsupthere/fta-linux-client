@@ -93,6 +93,51 @@ fn parse_release(api: ApiRelease) -> Result<Release, String> {
     })
 }
 
+/// Whether a failed request is worth repeating: the server or the connection hiccuped, the request itself was fine.
+fn is_transient(e: &ureq::Error) -> bool {
+    match e {
+        ureq::Error::StatusCode(c) => (500..=599).contains(c) || *c == 429,
+        ureq::Error::Timeout(_) | ureq::Error::Io(_) | ureq::Error::ConnectionFailed | ureq::Error::HostNotFound => true,
+        _ => false,
+    }
+}
+
+fn describe(e: &ureq::Error) -> String {
+    match e {
+        ureq::Error::StatusCode(c) if (500..=599).contains(c) => {
+            format!("GitHub's server did not answer (HTTP {c}). That is usually brief: try again in a minute.")
+        }
+        ureq::Error::StatusCode(429) => "GitHub is asking for a pause (HTTP 429). Try again in a minute.".to_string(),
+        ureq::Error::StatusCode(c) => format!("GitHub refused the request (HTTP {c})."),
+        other => format!("Could not reach GitHub: {other}"),
+    }
+}
+
+/// GET with up to three tries, waiting a little between them, when the failure looks temporary. A release that
+/// was published a moment ago is often slow or answers with a gateway error the first time it is fetched.
+fn get_with_retry(url: &str, accept: Option<&str>) -> Result<ureq::http::Response<ureq::Body>, String> {
+    let mut last = String::new();
+    for attempt in 0..3u64 {
+        if attempt > 0 {
+            std::thread::sleep(Duration::from_secs(2 * attempt + 1));
+        }
+        let mut req = agent().get(url);
+        if let Some(a) = accept {
+            req = req.header("Accept", a);
+        }
+        match req.call() {
+            Ok(resp) => return Ok(resp),
+            Err(e) => {
+                last = describe(&e);
+                if !is_transient(&e) {
+                    break;
+                }
+            }
+        }
+    }
+    Err(last)
+}
+
 /// One release as the changelog shows it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Note {
@@ -135,11 +180,7 @@ pub fn fetch_feed() -> Result<Feed, String> {
         return Ok(Feed { latest, notes });
     }
     let url = format!("https://api.github.com/repos/{REPO}/releases?per_page=8");
-    let mut resp = agent()
-        .get(&url)
-        .header("Accept", "application/vnd.github+json")
-        .call()
-        .map_err(|e| format!("Could not reach GitHub: {e}"))?;
+    let mut resp = get_with_retry(&url, Some("application/vnd.github+json"))?;
     let all: Vec<ApiRelease> = resp.body_mut().read_json().map_err(|e| format!("Unexpected answer from GitHub: {e}"))?;
     feed_from(all)
 }
@@ -294,7 +335,7 @@ fn expected_sha(rel: &Release) -> Result<String, String> {
         return Ok(h.clone());
     }
     let url = rel.sums_url.as_ref().ok_or("This release has no checksum to verify the download with.")?;
-    let mut resp = agent().get(url).call().map_err(|e| format!("Could not fetch the checksum list: {e}"))?;
+    let mut resp = get_with_retry(url, None)?;
     let text = resp.body_mut().read_to_string().map_err(|e| format!("Could not read the checksum list: {e}"))?;
     text.lines()
         .filter_map(|l| {
@@ -311,7 +352,7 @@ fn open_source(rel: &Release) -> Result<(Box<dyn Read>, u64), String> {
         let f = std::fs::File::open(path).map_err(|e| format!("test installer: {e}"))?;
         return Ok((Box::new(f), rel.size));
     }
-    let resp = agent().get(&rel.installer_url).call().map_err(|e| format!("Download failed: {e}"))?;
+    let resp = get_with_retry(&rel.installer_url, None)?;
     let total = resp
         .headers()
         .get("content-length")
@@ -540,5 +581,16 @@ mod tests {
         assert_eq!(feed.notes[0].title, "faster particles");
         assert_eq!(feed.notes[0].date, "2026-11-08");
         assert_eq!(feed.notes[1].title, "");
+    }
+
+    #[test]
+    fn gateway_errors_are_retried_and_described_plainly() {
+        assert!(is_transient(&ureq::Error::StatusCode(504)));
+        assert!(is_transient(&ureq::Error::StatusCode(503)));
+        assert!(is_transient(&ureq::Error::StatusCode(429)));
+        assert!(!is_transient(&ureq::Error::StatusCode(404)));
+        assert!(describe(&ureq::Error::StatusCode(504)).contains("504"));
+        assert!(describe(&ureq::Error::StatusCode(504)).contains("try again"));
+        assert!(describe(&ureq::Error::StatusCode(404)).contains("404"));
     }
 }
