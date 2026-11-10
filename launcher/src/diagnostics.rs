@@ -292,8 +292,11 @@ pub fn run(client: Option<&Path>, launcher_version: &str, update_note: &str) -> 
 
 fn finish(checks: Vec<Check>, launcher_version: &str, update_note: &str, client: Option<&Path>, log: Option<(PathBuf, String)>) -> Report {
     let mut text = String::new();
-    text.push_str("From The Ashes Linux launcher: diagnostics report\n");
-    text.push_str(&format!("launcher version: {launcher_version}\n"));
+    text.push_str("Realmgate launcher: diagnostics report\n");
+    // The release tag is what matters once a client is known; the crate version is only a fallback.
+    if client.is_none() {
+        text.push_str(&format!("launcher version: {launcher_version}\n"));
+    }
     if let Some(client) = client {
         text.push_str(&format!("installed release: {}\n", crate::updater::installed_tag(client).unwrap_or_else(|| "not recorded".into())));
         if let Ok(stamp) = std::fs::read_to_string(client.join("FTA-Linux/VERSION.txt")) {
