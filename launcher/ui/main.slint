@@ -1,15 +1,40 @@
-// FTA Linux launcher UI. Alliance blue and gold, a frameless rounded window and a frosted panel over a
-// background picture. Data and actions come from the Rust side.
+// Realmgate launcher UI. Portal theme (dusk-purple stone, the portal's green for actions, torch-fire amber for
+// headings), a frameless rounded window and a frosted panel over a day or night background picture. Data and
+// actions come from the Rust side.
 
-global Pal {
-    out property <color> gold: #e8b84a;
-    out property <color> gold-hi: #f6cf70;
-    out property <color> gold-lo: #c4952a;
-    out property <color> on-gold: #0b1430;
-    out property <color> blue: #3b78e7;
-    out property <color> text: #f2f6ff;
-    out property <color> text-dim: #c3d2f0b8;
-    out property <color> glass: #0a1a4f7a;
+import "../assets/fonts/CinzelBold.ttf";
+import "../assets/fonts/CinzelBlack.ttf";
+import "../assets/fonts/CinzelDecorative-Bold.ttf";
+
+export global Pal {
+    // Day (dusk purple) or night (midnight blue); the Rust side sets it from the saved choice or the clock, and the
+    // toggle in the header flips it.
+    in-out property <bool> night: false;
+    // Fonts: engraved capitals for headings and buttons, a flourished one for the name.
+    out property <string> font-head: "Cinzel Bold";
+    out property <string> font-black: "Cinzel Black";
+    out property <string> font-title: "Cinzel Decorative";
+    // Torch-fire amber: headings, bullets and links.
+    out property <color> gold: #ffb347;
+    out property <color> gold-hi: #ffd391;
+    out property <color> gold-lo: #e0881c;
+    out property <color> on-gold: #1f1005;
+    // The portal's green: actions, the active tab, focus and progress.
+    out property <color> portal: #8dff3c;
+    out property <color> portal-hi: #bfff85;
+    out property <color> portal-lo: #4fbf1c;
+    out property <color> on-portal: #06140a;
+    out property <color> text: night ? #eef2ff : #f5f1ff;
+    out property <color> text-dim: night ? #c4d0f0b8 : #d6cbf0b8;
+    out property <color> glass: night ? #0b123678 : #1a0f3a70;
+    // Window ground, header buttons and the stone-coloured secondary buttons.
+    out property <color> base: night ? #070a1c : #0d0820;
+    out property <color> chrome: night ? #0a1030b8 : #150c2eb8;
+    out property <color> stone: night ? #1a2650a0 : #2c1d4fa0;
+    out property <color> stone-hi: night ? #2a3a78d8 : #44327ad8;
+    out property <color> stone-press: night ? #3a4c90d0 : #5a4694d0;
+    out property <color> rim: night ? #9db8ff48 : #c8b6ff48;
+    out property <color> bubble: night ? #16204a : #2a1d4a;
     out property <color> line: #ffffff2a;
     out property <color> warn: #ffd98a;
 }
@@ -43,12 +68,13 @@ component TabButton inherits Rectangle {
     callback clicked;
     height: 34px;
     border-radius: 17px;
-    background: active ? Pal.gold : (ta.has-hover ? #ffffff22 : transparent);
+    background: active ? @linear-gradient(180deg, Pal.portal-hi 0%, Pal.portal-lo 100%) : (ta.has-hover ? #8dff3c26 : transparent);
     animate background { duration: 140ms; }
     Text {
         text: root.label;
-        color: root.active ? Pal.on-gold : Pal.text;
-        font-size: 14px;
+        color: root.active ? Pal.on-portal : Pal.text;
+        font-size: 15px;
+        font-family: Pal.font-head;
         font-weight: 600;
         horizontal-alignment: center;
         vertical-alignment: center;
@@ -56,31 +82,72 @@ component TabButton inherits Rectangle {
     ta := TouchArea { clicked => { root.clicked(); } }
 }
 
+// Portal button. The primary one is a pool of swirling portal energy (two counter-turning layers of the same
+// vortex under the label); the secondary one is dark stone that lights up green when hovered.
 component GlassButton inherits Rectangle {
     in property <string> label;
     in property <bool> primary: true;
     in property <bool> enabled: true;
+    // The label fills the button: tall primary buttons (Play) pass a big size.
+    in property <length> text-size: primary ? 22px : 17px;
     callback clicked;
     height: 52px;
     border-radius: self.height / 2;
     opacity: enabled ? 1.0 : 0.45;
-    background: primary ? (ta.pressed ? Pal.gold-lo : (ta.has-hover ? Pal.gold-hi : Pal.gold)) : (ta.has-hover ? #ffffff30 : #ffffff1c);
-    animate background { duration: 140ms; }
-    drop-shadow-blur: primary && enabled ? 18px : 0px;
-    drop-shadow-color: primary && enabled ? #e8b84a55 : transparent;
-    drop-shadow-offset-y: 4px;
-    Rectangle {
+    drop-shadow-blur: primary && enabled ? (ta.has-hover ? 28px : 16px) : 0px;
+    drop-shadow-color: primary && enabled ? #8dff3c80 : transparent;
+    drop-shadow-offset-y: 3px;
+    animate drop-shadow-blur { duration: 220ms; }
+
+    body := Rectangle {
         border-radius: parent.border-radius;
-        border-width: primary ? 0px : 1px;
-        border-color: Pal.line;
-    }
-    Text {
-        text: root.label;
-        color: root.primary ? Pal.on-gold : Pal.text;
-        font-size: 18px;
-        font-weight: 700;
-        horizontal-alignment: center;
-        vertical-alignment: center;
+        clip: true;
+        background: primary ? #0a2a10 : (ta.pressed ? Pal.stone-press : (ta.has-hover ? Pal.stone-hi : Pal.stone));
+        animate background { duration: 140ms; }
+        if root.primary : Image {
+            source: @image-url("../assets/swirl.png");
+            width: max(root.width, 220px) * 1.5;
+            height: self.width;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            rotation-angle: root.enabled ? 360deg * animation-tick() / 18s : 0deg;
+            opacity: ta.pressed ? 0.55 : (ta.has-hover ? 1.0 : 0.82);
+            animate opacity { duration: 200ms; }
+        }
+        if root.primary : Image {
+            source: @image-url("../assets/swirl.png");
+            width: max(root.width, 220px) * 1.1;
+            height: self.width;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            rotation-angle: root.enabled ? -360deg * animation-tick() / 11s : 0deg;
+            opacity: ta.has-hover ? 0.55 : 0.38;
+            animate opacity { duration: 200ms; }
+        }
+        // keeps the label readable over the bright swirl
+        if root.primary : Rectangle {
+            background: @linear-gradient(90deg, #00000090 0%, #00000030 38%, #00000030 62%, #00000090 100%);
+        }
+        Rectangle {
+            border-radius: parent.border-radius;
+            border-width: primary ? 1.5px : 1px;
+            border-color: primary ? (ta.has-hover ? Pal.portal-hi : #bfff85a0) : (ta.has-hover ? Pal.portal-lo : Pal.rim);
+            animate border-color { duration: 140ms; }
+        }
+        Text {
+            text: root.label;
+            color: root.primary ? #f4ffe8 : Pal.text;
+            font-size: root.text-size;
+            font-family: root.primary ? Pal.font-black : Pal.font-head;
+            font-weight: 800;
+            letter-spacing: root.primary ? 3px : 1px;
+            // A dark outline keeps the label crisp over the bright swirl.
+            stroke: root.primary ? #031208 : transparent;
+            stroke-width: root.primary ? max(1.5px, root.text-size / 19) : 0px;
+            stroke-style: outside;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
     }
     ta := TouchArea { enabled: root.enabled; clicked => { root.clicked(); } }
 }
@@ -92,9 +159,9 @@ component PresetPill inherits Rectangle {
     height: 30px;
     width: t.preferred-width + 28px;
     border-radius: 15px;
-    background: active ? #e8b84a40 : (ta.pressed ? #3b78e755 : (ta.has-hover ? #3b78e733 : #ffffff14));
+    background: active ? #8dff3c38 : (ta.pressed ? #8dff3c45 : (ta.has-hover ? #8dff3c26 : #ffffff14));
     border-width: 1px;
-    border-color: active ? Pal.gold : (ta.has-hover ? Pal.blue : Pal.line);
+    border-color: active ? Pal.portal : (ta.has-hover ? Pal.portal-lo : Pal.line);
     animate background, border-color { duration: 120ms; }
     t := Text { text: root.label; color: Pal.text; font-size: 13px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
     ta := TouchArea { clicked => { root.clicked(); } }
@@ -121,13 +188,13 @@ component Check inherits Rectangle {
             y: (root.height - 22px) / 2;
             border-radius: 7px;
             border-width: 2px;
-            border-color: root.checked ? Pal.gold : #ffffff88;
-            background: root.checked ? Pal.gold : transparent;
+            border-color: root.checked ? Pal.portal : #ffffff88;
+            background: root.checked ? Pal.portal : transparent;
             animate background, border-color { duration: 140ms; }
             Text {
                 text: "✓";
                 visible: root.checked;
-                color: Pal.on-gold;
+                color: Pal.on-portal;
                 font-size: 15px;
                 font-weight: 800;
                 horizontal-alignment: center;
@@ -145,6 +212,7 @@ component Check inherits Rectangle {
 }
 
 component Section inherits Text {
+    font-family: Pal.font-head;
     color: Pal.gold;
     font-size: 12px;
     font-weight: 800;
@@ -160,7 +228,7 @@ component Field inherits Rectangle {
     border-radius: 12px;
     background: #00000045;
     border-width: 1px;
-    border-color: root.invalid ? #ff8a80 : (input.has-focus ? Pal.gold : Pal.line);
+    border-color: root.invalid ? #ff8a80 : (input.has-focus ? Pal.portal : Pal.line);
     animate border-color { duration: 120ms; }
     Text {
         x: 14px;
@@ -180,7 +248,7 @@ component Field inherits Rectangle {
         font-size: 15px;
         vertical-alignment: center;
         single-line: true;
-        selection-background-color: #3b78e7a0;
+        selection-background-color: #6fe02a80;
         selection-foreground-color: #ffffff;
         edited => { root.edited(self.text); }
     }
@@ -205,7 +273,7 @@ component ApplyBar inherits HorizontalLayout {
         horizontal-stretch: 1;
     }
     GlassButton { width: 130px; height: 44px; primary: false; label: "Reset"; enabled: root.dirty; clicked => { root.reset(); } }
-    GlassButton { width: 150px; height: 44px; label: "Apply"; enabled: root.dirty && !root.blocked && root.can-apply; clicked => { root.apply(); } }
+    GlassButton { width: 150px; height: 44px; text-size: 23px; label: "APPLY"; enabled: root.dirty && !root.blocked && root.can-apply; clicked => { root.apply(); } }
 }
 
 component StatusDot inherits Rectangle {
@@ -216,6 +284,18 @@ component StatusDot inherits Rectangle {
     background: level == 0 ? #5ad18a : (level == 1 ? #ffd98a : #ff6b6b);
 }
 
+// A thin carved divider: an amber line that fades out at both ends with a diamond in the middle.
+component Ornament inherits Rectangle {
+    height: 16px;
+    HorizontalLayout {
+        alignment: center;
+        spacing: 10px;
+        Rectangle { width: 120px; height: 1px; y: 8px; background: @linear-gradient(90deg, #ffb34700 0%, #ffb347c0 100%); }
+        Path { width: 14px; height: 14px; y: 1px; viewbox-width: 14; viewbox-height: 14; commands: "M 7 0 L 14 7 L 7 14 L 0 7 Z"; fill: Pal.gold; }
+        Rectangle { width: 120px; height: 1px; y: 8px; background: @linear-gradient(90deg, #ffb347c0 0%, #ffb34700 100%); }
+    }
+}
+
 export component MainWindow inherits Window {
     // Frameless window with a transparent corner area; needs a compositing window manager.
     no-frame: true;
@@ -223,7 +303,8 @@ export component MainWindow inherits Window {
     width: 1000px;
     height: 640px;
     title: "Realmgate";
-    icon: @image-url("../assets/icon.png");
+    // The taskbar icon (X11 window icon); the portal artwork is used inside the launcher.
+    icon: @image-url("../assets/taskbar.png");
 
     // 0 Play, 1 Game, 2 Settings, 3 Diagnostics
     in-out property <int> tab: 0;
@@ -232,6 +313,9 @@ export component MainWindow inherits Window {
     in property <string> headline: "Ready to play";
     in property <string> subline;
     in property <bool> client-found: true;
+    // What the sentinel on the Play page is saying; clicking it asks for another line.
+    in property <string> quip;
+    callback new-quip;
     callback play;
 
     // Updates. 0 nothing to show, 1 checking, 2 available, 3 asking for confirmation, 4 working, 5 failed
@@ -301,6 +385,7 @@ export component MainWindow inherits Window {
     // Window
     callback close-requested;
     callback minimize-requested;
+    callback toggle-theme;
     // Starts moving the window; the position is where the pointer went down.
     callback drag-window(float, float);
     // Opens one of the launcher's fixed links in the user's browser (the Rust side checks the URL).
@@ -309,13 +394,15 @@ export component MainWindow inherits Window {
     // Holds the report so the Copy button can use the system clipboard; one transparent pixel, never seen.
     report-input := TextInput { x: 0px; y: 0px; width: 1px; height: 1px; text: root.report-text; read-only: true; color: transparent; wrap: no-wrap; }
 
+    // The content sits 5 px inside the window; the stone frame (below) covers the edge and the gap.
     shell := Rectangle {
-        border-radius: 20px;
+        x: 5px; y: 5px; width: parent.width - 10px; height: parent.height - 10px;
+        border-radius: 16px;
         clip: true;
-        background: #08122b;
+        background: Pal.base;
 
         Image {
-            source: @image-url("../assets/bg.jpg");
+            source: Pal.night ? @image-url("../assets/bg-night.jpg") : @image-url("../assets/bg-day.jpg");
             width: parent.width;
             height: parent.height;
             image-fit: cover;
@@ -331,11 +418,11 @@ export component MainWindow inherits Window {
                 padding-left: 34px; padding-right: 20px; padding-top: 22px; padding-bottom: 12px;
                 spacing: 14px;
                 // Room for the logo, which is drawn larger than the layout row (see the Image after this layout).
-                Rectangle { width: 62px; }
+                Rectangle { width: 102px; }
                 VerticalLayout {
                     alignment: center;
                     spacing: 2px;
-                    Text { text: "REALMGATE"; color: Pal.text; font-size: 26px; font-weight: 800; letter-spacing: 4px; }
+                    Text { text: "REALMGATE"; color: Pal.text; font-family: Pal.font-title; font-size: 30px; font-weight: 800; letter-spacing: 3px; stroke: #12072b; stroke-width: 3px; stroke-style: outside; }
                     Text { text: "A Linux client reforged for modern systems."; color: Pal.text-dim; font-size: 12px; font-weight: 600; }
                     Text { text: "BY @GHOSTSUPTHERE"; color: Pal.gold; font-size: 10px; font-weight: 700; letter-spacing: 4px; }
                 }
@@ -343,33 +430,44 @@ export component MainWindow inherits Window {
                 HorizontalLayout {
                     spacing: 8px;
                     alignment: end;
+                    // Day / night switch: the highlighted disc slides under the sun or the moon.
+                    Rectangle {
+                        width: 66px; height: 32px; border-radius: 16px;
+                        background: Pal.chrome;
+                        border-width: 1px;
+                        border-color: theme-ta.has-hover ? Pal.portal-lo : #ffffff26;
+                        animate border-color { duration: 120ms; }
+                        Rectangle {
+                            y: 3px; width: 26px; height: 26px; border-radius: 13px;
+                            x: Pal.night ? 37px : 3px;
+                            background: Pal.night ? #7d9bff55 : #ffb34770;
+                            animate x { duration: 220ms; easing: ease-in-out; }
+                        }
+                        Image { source: @image-url("../assets/sun.png"); x: 6px; y: 6px; width: 20px; height: 20px; opacity: Pal.night ? 0.5 : 1.0; animate opacity { duration: 200ms; } }
+                        Image { source: @image-url("../assets/moon.png"); x: 40px; y: 6px; width: 20px; height: 20px; opacity: Pal.night ? 1.0 : 0.5; animate opacity { duration: 200ms; } }
+                        theme-ta := TouchArea { clicked => { root.toggle-theme(); } }
+                    }
                     Rectangle {
                         width: 78px; height: 32px; border-radius: 16px;
-                        background: wiki-ta.has-hover ? Pal.gold : #0a1a40b0;
+                        background: wiki-ta.has-hover ? Pal.gold : Pal.chrome;
                         animate background { duration: 120ms; }
                         Text { text: "Wiki ↗"; color: wiki-ta.has-hover ? Pal.on-gold : Pal.text; font-size: 13px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
                         wiki-ta := TouchArea { clicked => { root.open-link("https://wiki.downloadautism.com/"); } }
                     }
                     Rectangle {
                         width: 32px; height: 32px; border-radius: 16px;
-                        background: min-ta.has-hover ? #ffffff44 : #0a1a40b0;
+                        background: min-ta.has-hover ? #ffffff44 : Pal.chrome;
                         Text { text: "–"; color: Pal.text; font-size: 18px; horizontal-alignment: center; vertical-alignment: center; }
                         min-ta := TouchArea { clicked => { root.minimize-requested(); } }
                     }
                     Rectangle {
                         width: 32px; height: 32px; border-radius: 16px;
-                        background: close-ta.has-hover ? #e5484d : #0a1a40b0;
+                        background: close-ta.has-hover ? #e5484d : Pal.chrome;
                         animate background { duration: 120ms; }
                         Text { text: "✕"; color: Pal.text; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
                         close-ta := TouchArea { clicked => { root.close-requested(); } }
                     }
                 }
-            }
-            Image {
-                source: @image-url("../assets/icon.png");
-                x: 22px; y: 4px;
-                width: 78px; height: 78px;
-                image-fit: contain;
             }
         }
 
@@ -382,7 +480,7 @@ export component MainWindow inherits Window {
             clip: true;
             // Same picture, pre-blurred, aligned with the sharp one so it reads as frosted glass.
             Image {
-                source: @image-url("../assets/bg-blur.jpg");
+                source: Pal.night ? @image-url("../assets/bg-night-blur.jpg") : @image-url("../assets/bg-day-blur.jpg");
                 x: -panel.x; y: -panel.y;
                 width: shell.width; height: shell.height;
                 image-fit: cover;
@@ -414,25 +512,31 @@ export component MainWindow inherits Window {
                 }
 
                 // ---- Play page ----
-                if root.tab == 0 : HorizontalLayout {
+                if root.tab == 0 : Rectangle {
+                  vertical-stretch: 1;
+                  HorizontalLayout {
+                    x: 0px; y: 0px; width: parent.width; height: parent.height;
                     spacing: 30px;
                     VerticalLayout {
                     horizontal-stretch: 1;
                     spacing: 14px;
-                    alignment: center;
-                    Text {
-                        // An update waiting (or being installed) changes the headline; otherwise it is whatever the Rust side set.
-                        text: !root.client-found ? root.headline : (root.update-state == 2 || root.update-state == 3 || (root.update-state == 5 && root.update-retry) ? "Update ready" : (root.update-state == 4 ? "Updating..." : root.headline));
+                    Rectangle { vertical-stretch: 1; }
+                    // The headline and its explanation only appear when something is wrong (no client folder).
+                    if !root.client-found : Text {
+                        text: root.headline;
                         color: Pal.text;
-                        font-size: 28px;
+                        font-size: 30px;
+                        font-family: Pal.font-head;
                         font-weight: 800;
+                        wrap: word-wrap;
+                        horizontal-alignment: center;
                     }
-                    Text { text: root.subline; color: Pal.text-dim; font-size: 14px; wrap: word-wrap; }
+                    if !root.client-found : Text { text: root.subline; color: Pal.text-dim; font-size: 14px; wrap: word-wrap; horizontal-alignment: center; }
                     Rectangle { height: 6px; }
 
                     // asking for confirmation before anything is installed
                     if root.update-state == 3 : Rectangle {
-                        height: 150px;
+                        height: 200px;
                         border-radius: 16px;
                         background: #ffffff16;
                         border-width: 1px;
@@ -440,12 +544,12 @@ export component MainWindow inherits Window {
                         VerticalLayout {
                             padding: 18px;
                             spacing: 8px;
-                            Text { text: root.update-title; color: Pal.gold; font-size: 17px; font-weight: 800; }
+                            Text { text: root.update-title; color: Pal.gold; font-family: Pal.font-head; font-size: 18px; font-weight: 800; }
                             Text { text: root.update-notes; color: Pal.text; font-size: 13px; wrap: word-wrap; vertical-stretch: 1; overflow: elide; }
                             HorizontalLayout {
                                 spacing: 10px;
                                 alignment: start;
-                                GlassButton { width: 170px; height: 40px; label: "Update now"; clicked => { root.start-update(); } }
+                                GlassButton { width: 180px; height: 42px; text-size: 19px; label: "UPDATE NOW"; clicked => { root.start-update(); } }
                                 GlassButton { width: 120px; height: 40px; primary: false; label: "Not now"; clicked => { root.cancel-ask(); } }
                             }
                         }
@@ -462,19 +566,30 @@ export component MainWindow inherits Window {
                             Rectangle {
                                 x: 0; width: parent.width * max(0.04, min(1.0, root.update-progress)); height: parent.height;
                                 border-radius: 5px;
-                                background: Pal.gold;
+                                background: @linear-gradient(90deg, Pal.portal-lo 0%, Pal.portal-hi 100%);
                                 animate width { duration: 160ms; }
                             }
                         }
                         Text { text: root.update-text; color: Pal.text-dim; font-size: 13px; overflow: elide; }
                     }
 
+                    if root.client-found && root.update-state != 3 && root.update-state != 4 : Text {
+                        text: (root.update-state == 2 || (root.update-state == 5 && root.update-retry)) ? "AN UPDATE AWAITS" : "THE PORTAL IS OPEN";
+                        color: Pal.gold;
+                        font-family: Pal.font-head;
+                        font-size: 15px;
+                        letter-spacing: 5px;
+                        horizontal-alignment: center;
+                    }
+                    if root.client-found && root.update-state != 3 && root.update-state != 4 : Ornament { }
                     if root.update-state != 3 && root.update-state != 4 : HorizontalLayout {
-                        alignment: start;
+                        alignment: center;
                         spacing: 14px;
                         GlassButton {
-                            width: 260px;
-                            label: root.update-state == 2 ? "Update" : (root.update-state == 5 && root.update-retry ? "Try again" : "Play");
+                            width: 270px;
+                            height: 68px;
+                            text-size: root.update-state == 2 ? 38px : (root.update-state == 5 && root.update-retry ? 29px : 44px);
+                            label: root.update-state == 2 ? "UPDATE" : (root.update-state == 5 && root.update-retry ? "TRY AGAIN" : "PLAY");
                             enabled: root.client-found && !root.game-running;
                             clicked => { if (root.update-state == 2 || (root.update-state == 5 && root.update-retry)) { root.ask-update(); } else { root.play(); } }
                         }
@@ -487,36 +602,83 @@ export component MainWindow inherits Window {
                         }
                     }
 
-                    Text {
-                        text: root.game-running ? "The game is running." : (root.update-state == 4 ? "" : root.update-text);
-                        visible: self.text != "" && root.update-state != 3;
-                        color: (root.update-state == 5 || root.game-running) ? Pal.warn : Pal.text-dim;
+                    if root.game-running || root.update-state == 5 : Text {
+                        text: root.game-running ? "The game is running." : root.update-text;
+                        color: Pal.warn;
                         font-size: 13px;
                         wrap: word-wrap;
+                        horizontal-alignment: center;
                     }
-                    if root.update-state == 5 || root.update-state == 0 : Rectangle {
-                        height: 22px;
-                        HorizontalLayout {
-                            alignment: start;
+                    if root.client-found && root.update-state != 3 && root.update-state != 4 : Ornament { }
+                    if root.client-found && root.update-state != 3 && root.update-state != 4 : Text {
+                        text: (root.update-state == 2 || (root.update-state == 5 && root.update-retry)) ? "Update first, or play anyway." : "Step through when you are ready.";
+                        color: Pal.text-dim;
+                        font-size: 13px;
+                        font-italic: true;
+                        horizontal-alignment: center;
+                    }
+                    Rectangle { vertical-stretch: 1; }
+
+                    // The sentinel from the taskbar icon, with something to say. Click it for another line.
+                    if root.update-state != 3 && root.update-state != 4 && root.quip != "" : HorizontalLayout {
+                        height: 92px;
+                        alignment: start;
+                        spacing: 0px;
+                        Rectangle {
+                            width: 92px;
+                            Image {
+                                source: @image-url("../assets/taskbar.png");
+                                width: 80px; height: 80px;
+                                x: 6px;
+                                y: 6px + 2px * sin(360deg * animation-tick() / 3.2s) - (sentinel-ta.has-hover ? 3px : 0px);
+                                image-fit: contain;
+                                animate y { duration: 140ms; }
+                            }
+                            sentinel-ta := TouchArea { mouse-cursor: pointer; clicked => { root.new-quip(); } }
+                        }
+                        Path {
+                            width: 12px; height: 92px;
+                            viewbox-width: 12; viewbox-height: 92;
+                            commands: "M 12 38 L 0 46 L 12 54 Z";
+                            fill: Pal.bubble;
+                        }
+                        Rectangle {
+                            width: 340px;
+                            border-radius: 14px;
+                            background: Pal.bubble;
+                            border-width: 1px;
+                            border-color: Pal.rim;
                             Text {
-                                text: "Check for updates";
-                                color: chk-ta.has-hover ? Pal.gold-hi : Pal.text-dim;
-                                font-size: 12px;
-                                font-weight: 600;
-                                chk-ta := TouchArea { clicked => { root.check-update(); } }
+                                x: 16px; y: 0px;
+                                width: parent.width - 32px; height: parent.height;
+                                text: root.quip;
+                                color: Pal.text;
+                                font-size: 14px;
+                                font-italic: true;
+                                wrap: word-wrap;
+                                vertical-alignment: center;
                             }
                         }
                     }
-                    Rectangle { height: 2px; }
+                    Rectangle { height: 4px; }
+
+                    // Status line at the very bottom: the version situation, and a way to check again.
                     HorizontalLayout {
                         alignment: start;
-                        spacing: 6px;
-                        Text { text: "New here? Guides, commands and class changes are on the"; color: Pal.text-dim; font-size: 13px; vertical-alignment: center; }
-                        Text {
-                            text: "FTA Wiki ↗";
-                            color: wiki-link.has-hover ? Pal.gold-hi : Pal.gold;
-                            font-size: 13px; font-weight: 700; vertical-alignment: center;
-                            wiki-link := TouchArea { clicked => { root.open-link("https://wiki.downloadautism.com/"); } }
+                        spacing: 14px;
+                        if root.update-state != 3 && root.update-state != 4 && root.update-state != 5 && root.update-text != "" : Text {
+                            text: root.update-text;
+                            color: Pal.text-dim;
+                            font-size: 13px;
+                            vertical-alignment: center;
+                        }
+                        if root.update-state == 5 || root.update-state == 0 : Text {
+                            text: "Check for updates";
+                            color: chk-ta.has-hover ? Pal.gold-hi : Pal.text-dim;
+                            font-size: 12px;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                            chk-ta := TouchArea { clicked => { root.check-update(); } }
                         }
                     }
                     }
@@ -532,7 +694,7 @@ export component MainWindow inherits Window {
                         VerticalLayout {
                             padding: 16px;
                             spacing: 8px;
-                            Section { text: "WHAT'S NEW"; height: 22px; }
+                            Section { text: "WHAT'S NEW"; height: 30px; font-size: 19px; letter-spacing: 2px; }
                             if root.changelog-status != "" : Text {
                                 text: root.changelog-status;
                                 color: Pal.text-dim;
@@ -553,7 +715,7 @@ export component MainWindow inherits Window {
                                             if row.kind == 0 : VerticalLayout {
                                                 padding-top: 10px;
                                                 spacing: 1px;
-                                                Text { text: row.text; color: Pal.gold; font-size: 17px; font-weight: 800; }
+                                                Text { text: row.text; color: Pal.gold; font-family: Pal.font-head; font-size: 18px; font-weight: 800; }
                                                 Text { text: row.sub; color: Pal.text-dim; font-size: 11px; wrap: word-wrap; }
                                             }
                                             if row.kind == 1 : Text { text: row.text; color: Pal.text; font-size: 13px; font-weight: 700; wrap: word-wrap; }
@@ -578,6 +740,7 @@ export component MainWindow inherits Window {
                             }
                         }
                     }
+                }
                 }
 
                 // ---- Game page ----
@@ -742,10 +905,29 @@ export component MainWindow inherits Window {
                         Text { text: root.diag-status; color: Pal.text-dim; font-size: 13px; vertical-alignment: center; overflow: elide; horizontal-stretch: 1; }
                         GlassButton { width: 150px; height: 44px; primary: false; label: "Check again"; enabled: !root.diag-busy; clicked => { root.run-diagnostics(); } }
                         GlassButton { width: 150px; height: 44px; primary: false; label: "Save report"; enabled: !root.diag-busy; clicked => { root.save-report(); } }
-                        GlassButton { width: 150px; height: 44px; label: "Copy report"; enabled: !root.diag-busy; clicked => { root.copy-report(); } }
+                        GlassButton { width: 190px; height: 44px; text-size: 17px; label: "COPY REPORT"; enabled: !root.diag-busy; clicked => { root.copy-report(); } }
                     }
                 }
             }
         }
+    }
+
+    // ---- aged stone frame: drawn over the edge of the content; its chips are transparent ----
+    Image {
+        source: Pal.night ? @image-url("../assets/frame-night.png") : @image-url("../assets/frame.png");
+        x: 0px; y: 0px; width: parent.width; height: parent.height;
+    }
+
+    // ---- crest: overlaps the header and the panel edge; lit with a soft pulsing glow while a client is
+    // installed, grey and dark while none is found ----
+    if root.client-found : Rectangle {
+        x: -3px; y: -11px; width: 160px; height: 160px; border-radius: 80px;
+        background: @radial-gradient(circle, #86ff4a58 0%, #86ff4a33 50%, #86ff4a00 76%);
+        opacity: 0.8 + 0.2 * sin(360deg * animation-tick() / 4.5s);
+    }
+    Image {
+        source: root.client-found ? @image-url("../assets/icon.png") : @image-url("../assets/icon-dim.png");
+        x: 17px; y: 11px; width: 118px; height: 118px;
+        image-fit: contain;
     }
 }

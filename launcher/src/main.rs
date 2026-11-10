@@ -11,6 +11,7 @@ mod catalog;
 mod cfgfile;
 mod client;
 mod diagnostics;
+mod quips;
 mod game;
 mod settings;
 mod updater;
@@ -19,6 +20,52 @@ slint::include_modules!();
 
 /// The only places the launcher will ever open in a browser.
 const ALLOWED_LINKS: &[&str] = &["https://wiki.downloadautism.com/"];
+
+/// The launcher's own config folder (`~/.config/fta-linux-launcher`): the theme choice and an optional quips.txt.
+fn config_dir() -> Option<std::path::PathBuf> {
+    let base = std::env::var_os("XDG_CONFIG_HOME")
+        .filter(|v| !v.is_empty())
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".config")))?;
+    Some(base.join("fta-linux-launcher"))
+}
+
+fn theme_file() -> Option<std::path::PathBuf> {
+    Some(config_dir()?.join("theme"))
+}
+
+fn save_theme(night: bool) {
+    let Some(path) = theme_file() else { return };
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let _ = std::fs::write(path, if night { "night\n" } else { "day\n" });
+}
+
+/// Which artwork to start with: FTA_LAUNCHER_THEME=day|night (for testing), else the saved choice, else night
+/// between 19:00 and 07:00 local time. The std library has no local time, so this asks `date` (always there on
+/// Linux); if that fails, it is day.
+fn initial_night() -> bool {
+    match std::env::var("FTA_LAUNCHER_THEME").as_deref() {
+        Ok("night") => return true,
+        Ok("day") => return false,
+        _ => {}
+    }
+    if let Some(saved) = theme_file().and_then(|p| std::fs::read_to_string(p).ok()) {
+        match saved.trim() {
+            "night" => return true,
+            "day" => return false,
+            _ => {}
+        }
+    }
+    let hour = std::process::Command::new("date")
+        .arg("+%H")
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .and_then(|t| t.trim().parse::<u32>().ok());
+    matches!(hour, Some(h) if !(7..19).contains(&h))
+}
 
 fn open_link(url: &str) {
     if !ALLOWED_LINKS.contains(&url) {
@@ -268,6 +315,35 @@ fn main() -> Result<(), slint::PlatformError> {
     slint::BackendSelector::new().select()?;
     slint::set_xdg_app_id("fta-linux-client")?;
     let ui = MainWindow::new()?;
+    ui.global::<Pal>().set_night(initial_night());
+    {
+        let weak = ui.as_weak();
+        ui.on_toggle_theme(move || {
+            if let Some(ui) = weak.upgrade() {
+                let pal = ui.global::<Pal>();
+                let night = !pal.get_night();
+                pal.set_night(night);
+                save_theme(night);
+            }
+        });
+    }
+
+    // ---- the sentinel's line ----
+    let lines = Rc::new(quips::load(config_dir().as_deref()));
+    let quip_index = Rc::new(std::cell::Cell::new(quips::pick(None, lines.len())));
+    ui.set_quip(lines[quip_index.get()].as_str().into());
+    {
+        let weak = ui.as_weak();
+        let index = quip_index.clone();
+        let lines = lines.clone();
+        ui.on_new_quip(move || {
+            if let Some(ui) = weak.upgrade() {
+                let next = quips::pick(Some(index.get()), lines.len());
+                index.set(next);
+                ui.set_quip(lines[next].as_str().into());
+            }
+        });
+    }
 
     // ---- Play page ----
     match &client_dir {
