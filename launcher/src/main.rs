@@ -262,6 +262,11 @@ fn main() -> Result<(), slint::PlatformError> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let client_dir = client::find(&args);
 
+    // Wayland shells pick the taskbar/dock icon from the .desktop file whose name matches the window's app id.
+    // The installer writes fta-linux-client.desktop (with Icon= and StartupWMClass=), so the two must agree.
+    // (set_xdg_app_id needs a platform to exist, so the default backend is selected first.)
+    slint::BackendSelector::new().select()?;
+    slint::set_xdg_app_id("fta-linux-client")?;
     let ui = MainWindow::new()?;
 
     // ---- Play page ----

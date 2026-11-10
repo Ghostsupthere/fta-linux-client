@@ -33,7 +33,7 @@ stage=$(mktemp -d)
 trap 'rm -rf -- "$stage"' EXIT
 mkdir -p -- "$stage/payload"
 cp -a -- "$payload/." "$stage/payload/"
-cp -- "$repo/overlay/FTA-Linux/play.sh" "$repo/overlay/FTA-Linux/install-deps.sh" "$stage/payload/FTA-Linux/"
+cp -- "$repo/overlay/FTA-Linux/play.sh" "$repo/overlay/FTA-Linux/install-deps.sh" "$repo/overlay/FTA-Linux/icon.png" "$stage/payload/FTA-Linux/"
 if [[ -f $payload/FTA-Linux/fta-launcher ]]; then
     cp -- "$repo/overlay/FTA-Linux/launcher.sh" "$stage/payload/FTA-Linux/"
     chmod +x "$stage/payload/FTA-Linux/launcher.sh" "$stage/payload/FTA-Linux/fta-launcher"

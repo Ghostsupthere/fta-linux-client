@@ -323,9 +323,12 @@ if [[ -x $client/FTA-Linux/launcher.sh ]]; then start_script=$client/FTA-Linux/l
 write_shortcut() {
     mkdir -p -- "$apps"
     {
-        printf '[Desktop Entry]\nType=Application\nName=From The Ashes (Linux)\n'
-        printf 'Comment=Native Linux client for From The Ashes\n'
+        printf '[Desktop Entry]\nType=Application\nName=Realmgate\n'
+        printf 'Comment=Native Linux client for From The Ashes\nKeywords=From The Ashes;FTA;WoW;Linux;launcher;\n'
         printf 'Exec="%s"\nPath=%s\nTerminal=false\nCategories=Game;\n' "$start_script" "$client"
+        if [[ -f $client/FTA-Linux/icon.png ]]; then
+            printf 'Icon=%s/FTA-Linux/icon.png\nStartupWMClass=fta-linux-client\n' "$client"
+        fi
         if [[ $start_script == */launcher.sh ]]; then
             printf 'Actions=Play;\n\n[Desktop Action Play]\nName=Play directly\nExec="%s/FTA-Linux/play.sh"\n' "$client"
         fi
@@ -338,7 +341,7 @@ if (( update )); then
     fi
 elif (( shortcut )); then
     write_shortcut
-    printf 'Added "From The Ashes (Linux)" to your applications menu.\n'
+    printf 'Added "Realmgate" to your applications menu.\n'
 fi
 
 printf '\nDone. Start it any time with:  %s\n' "$start_script"
