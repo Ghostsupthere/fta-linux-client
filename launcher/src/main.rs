@@ -19,7 +19,7 @@ mod updater;
 slint::include_modules!();
 
 /// The only places the launcher will ever open in a browser.
-const ALLOWED_LINKS: &[&str] = &["https://wiki.downloadautism.com/"];
+const ALLOWED_LINKS: &[&str] = &["https://wiki.downloadautism.com/", "https://github.com/Ghostsupthere"];
 
 /// The launcher's own config folder (`~/.config/fta-linux-launcher`): the theme choice and an optional quips.txt.
 fn config_dir() -> Option<std::path::PathBuf> {

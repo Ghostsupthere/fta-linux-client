@@ -134,20 +134,22 @@ component GlassButton inherits Rectangle {
             border-color: primary ? (ta.has-hover ? Pal.portal-hi : #bfff85a0) : (ta.has-hover ? Pal.portal-lo : Pal.rim);
             animate border-color { duration: 140ms; }
         }
-        Text {
-            text: root.label;
-            color: root.primary ? #f4ffe8 : Pal.text;
-            font-size: root.text-size;
-            font-family: root.primary ? Pal.font-black : Pal.font-head;
-            font-weight: 800;
-            letter-spacing: root.primary ? 3px : 1px;
-            // A dark outline keeps the label crisp over the bright swirl.
-            stroke: root.primary ? #031208 : transparent;
-            stroke-width: root.primary ? max(1.5px, root.text-size / 19) : 0px;
-            stroke-style: outside;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-        }
+    }
+    Text {
+        text: root.label;
+        color: root.primary ? #f4ffe8 : Pal.text;
+        font-size: root.text-size;
+        font-family: root.primary ? Pal.font-black : Pal.font-head;
+        font-weight: 800;
+        letter-spacing: root.primary ? 3px : 1px;
+        // A dark outline keeps the label crisp over the bright swirl.
+        stroke: root.primary ? #031208 : transparent;
+        stroke-width: root.primary ? max(1.5px, root.text-size / 19) : 0px;
+        stroke-style: outside;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        // the label sits outside the clipped body: drawn inside the clip it shimmered as the swirl turned
+        width: parent.width; height: parent.height;
     }
     ta := TouchArea { enabled: root.enabled; clicked => { root.clicked(); } }
 }
@@ -424,7 +426,19 @@ export component MainWindow inherits Window {
                     spacing: 2px;
                     Text { text: "REALMGATE"; color: Pal.text; font-family: Pal.font-title; font-size: 30px; font-weight: 800; letter-spacing: 3px; stroke: #12072b; stroke-width: 3px; stroke-style: outside; }
                     Text { text: "A Linux client reforged for modern systems."; color: Pal.text-dim; font-size: 12px; font-weight: 600; }
-                    Text { text: "BY @GHOSTSUPTHERE"; color: Pal.gold; font-size: 10px; font-weight: 700; letter-spacing: 4px; }
+                    Rectangle {
+                        height: 14px;
+                        HorizontalLayout {
+                            alignment: start;
+                            Text {
+                                text: "BY @GHOSTSUPTHERE";
+                                color: credit-ta.has-hover ? Pal.gold-hi : Pal.gold;
+                                font-size: 10px; font-weight: 700; letter-spacing: 4px;
+                                vertical-alignment: center;
+                                credit-ta := TouchArea { mouse-cursor: pointer; clicked => { root.open-link("https://github.com/Ghostsupthere"); } }
+                            }
+                        }
+                    }
                 }
                 Rectangle { horizontal-stretch: 1; }
                 HorizontalLayout {
@@ -494,11 +508,13 @@ export component MainWindow inherits Window {
 
             VerticalLayout {
                 padding: 26px;
+                padding-bottom: 22px;
                 spacing: 16px;
 
-                // pill tabs
+                // pill tabs (moved down a little to clear the logo's glow)
                 HorizontalLayout {
                     alignment: start;
+                    padding-top: 12px;
                     Rectangle {
                         background: #ffffff14; border-radius: 21px; width: 440px; height: 42px;
                         HorizontalLayout {
