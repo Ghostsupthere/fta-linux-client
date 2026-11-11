@@ -1,43 +1,98 @@
-// Realmgate launcher UI. Portal theme (dusk-purple stone, the portal's green for actions, torch-fire amber for
-// headings), a frameless rounded window and a frosted panel over a day or night background picture. Data and
-// actions come from the Rust side.
+// Realmgate launcher UI. The Dark Portal scene fills the window; the Play page is composed around it (Play block in
+// the dark sky on the left, the portal in the middle, a compact What's New card on the right, the sentinel at the
+// bottom left, a status bar underneath). The other pages sit on a frosted panel over the same scene.
+// Data and actions come from the Rust side.
 
 import "../assets/fonts/CinzelBold.ttf";
 import "../assets/fonts/CinzelBlack.ttf";
 import "../assets/fonts/CinzelDecorative-Bold.ttf";
 
+// ---------------------------------------------------------------------------------------------------------------
+// Design tokens
+// ---------------------------------------------------------------------------------------------------------------
+
 export global Pal {
-    // Day (dusk purple) or night (midnight blue); the Rust side sets it from the saved choice or the clock, and the
+    // Day (warm dusk) or night (deep violet); the Rust side sets it from the saved choice or the clock, and the
     // toggle in the header flips it.
-    in-out property <bool> night: false;
+    in-out property <bool> night: true;
     // Fonts: engraved capitals for headings and buttons, a flourished one for the name.
     out property <string> font-head: "Cinzel Bold";
     out property <string> font-black: "Cinzel Black";
     out property <string> font-title: "Cinzel Decorative";
-    // Torch-fire amber: headings, bullets and links.
-    out property <color> gold: #ffb347;
-    out property <color> gold-hi: #ffd391;
-    out property <color> gold-lo: #e0881c;
-    out property <color> on-gold: #1f1005;
-    // The portal's green: actions, the active tab, focus and progress.
-    out property <color> portal: #8dff3c;
+    // Antique gold: headings, bullets and links (kept restrained).
+    out property <color> gold: #e6c27a;
+    out property <color> gold-hi: #f8e2ab;
+    out property <color> gold-lo: #b98a3a;
+    out property <color> on-gold: #1f1405;
+    // Bone: the lightest stone tone, focus rings and small ornaments.
+    out property <color> bone: #efe2bf;
+    // Fel green: actions, the active tab, focus and progress.
+    out property <color> portal: #7dff3a;
     out property <color> portal-hi: #bfff85;
-    out property <color> portal-lo: #4fbf1c;
+    out property <color> portal-lo: #3fae18;
     out property <color> on-portal: #06140a;
-    out property <color> text: night ? #eef2ff : #f5f1ff;
-    out property <color> text-dim: night ? #c4d0f0b8 : #d6cbf0b8;
-    out property <color> glass: night ? #0b123678 : #1a0f3a70;
-    // Window ground, header buttons and the stone-coloured secondary buttons.
-    out property <color> base: night ? #070a1c : #0d0820;
-    out property <color> chrome: night ? #0a1030b8 : #150c2eb8;
-    out property <color> stone: night ? #1a2650a0 : #2c1d4fa0;
-    out property <color> stone-hi: night ? #2a3a78d8 : #44327ad8;
-    out property <color> stone-press: night ? #3a4c90d0 : #5a4694d0;
-    out property <color> rim: night ? #9db8ff48 : #c8b6ff48;
-    out property <color> bubble: night ? #16204a : #2a1d4a;
-    out property <color> line: #ffffff2a;
+    // Arcane violet: a quiet accent for borders and shadows.
+    out property <color> arcane: #7a3cff;
+    // Ember: warnings that are not errors.
+    out property <color> ember: #ff9a3d;
     out property <color> warn: #ffd98a;
+    out property <color> danger: #ff6b6b;
+    out property <color> text: night ? #f1efff : #f7f1ff;
+    out property <color> text-dim: night ? #c9c6ecc0 : #dccfe8c0;
+    out property <color> glass: night ? #0b0716a0 : #170b2a98;
+    // Window ground, header buttons and the stone-coloured secondary buttons.
+    out property <color> base: night ? #08050f : #120a1e;
+    out property <color> chrome: night ? #0c0818c0 : #170d2ac0;
+    out property <color> stone: night ? #221f3aa8 : #382c46a8;
+    out property <color> stone-hi: night ? #34305cd8 : #4e3f60d8;
+    out property <color> stone-press: night ? #45407ad0 : #614e78d0;
+    out property <color> rim: night ? #b4c0ff40 : #e3d3ff40;
+    out property <color> card: night ? #0a0614e6 : #130a22e0;
+    out property <color> bubble: night ? #130e26 : #24182e;
+    out property <color> line: #ffffff2a;
 }
+
+// Spacing scale, corner radii and type sizes.
+export global Sp {
+    out property <length> xs: 4px;
+    out property <length> sm: 8px;
+    out property <length> md: 12px;
+    out property <length> lg: 16px;
+    out property <length> xl: 24px;
+    // the gutter between the window edge and the content (the stone frame covers the outer part)
+    out property <length> gutter: 18px;
+}
+
+export global Rad {
+    out property <length> sm: 8px;
+    out property <length> md: 12px;
+    out property <length> lg: 16px;
+    out property <length> xl: 22px;
+}
+
+export global Fs {
+    out property <length> caption: 11px;
+    out property <length> small: 12px;
+    out property <length> body: 13px;
+    out property <length> base: 14px;
+    out property <length> lead: 15px;
+    out property <length> title: 19px;
+}
+
+// Motion. `t` is seconds since start and drives every ambient animation, in step with the display (so slow turns and
+// drifts stay smooth). With reduced motion it stays 0, so nothing moves and nothing asks for another frame; pages
+// without animation (Game, Settings, Diagnostics) never read it, so they redraw only when something changes.
+export global Mo {
+    in-out property <bool> reduce: false;
+    out property <float> t: reduce ? 0.0 : animation-tick() / 1s;
+    out property <duration> fast: reduce ? 0ms : 120ms;
+    out property <duration> base: reduce ? 0ms : 180ms;
+    out property <duration> slow: reduce ? 0ms : 700ms;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Data
+// ---------------------------------------------------------------------------------------------------------------
 
 export struct CheckRow {
     // 0 fine, 1 worth a look, 2 a problem
@@ -50,89 +105,208 @@ export struct ChangeRow {
     // 0 release heading, 1 lead-in, 2 paragraph, 3 bullet
     kind: int,
     text: string,
-    sub: string,
+    // release headings only: the release name and its date
+    title: string,
+    date: string,
+    // which release (0 is the newest) the row belongs to
+    release: int,
+    latest: bool,
+    installed: bool,
 }
 
 export struct SettingRow {
     key: string,
     label: string,
     hint: string,
-    // Non-empty on the first row of a category: the heading drawn above it.
-    header: string,
     checked: bool,
+    // position in the full list: what toggle-setting reports
+    index: int,
 }
+
+// A category of settings with its rows.
+export struct SettingGroup {
+    title: string,
+    // a short explanation shown beside the title (may be empty)
+    note: string,
+    rows: [SettingRow],
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Small shared pieces
+// ---------------------------------------------------------------------------------------------------------------
+
+// Tooltip: shows a moment after the pointer rests on its parent. Place it with x/y (or `right-aligned`).
+component Tip inherits Rectangle {
+    in property <string> text;
+    in property <bool> shown;
+    in property <bool> right-aligned: false;
+    in property <bool> above: false;
+    // The owner gives it the owner's size (width: parent.width; height: parent.height).
+    visible: root.shown;
+    tip-box := Rectangle {
+        x: root.right-aligned ? root.width - self.width : (root.width - self.width) / 2;
+        y: root.above ? -self.height - 6px : root.height + 6px;
+        width: tip-text.preferred-width + 20px;
+        height: 26px;
+        border-radius: Rad.sm;
+        background: #0b0618f2;
+        border-width: 1px;
+        border-color: Pal.rim;
+        opacity: root.shown ? 1.0 : 0.0;
+        animate opacity { delay: 450ms; duration: 120ms; }
+        tip-text := Text {
+            text: root.text;
+            color: Pal.text;
+            font-size: Fs.small;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// The ring drawn around a control that has keyboard focus.
+component FocusRing inherits Rectangle {
+    in property <bool> shown;
+    in property <length> radius: 12px;
+    // The owner gives it the owner's size; the ring is drawn 3px outside.
+    visible: root.shown;
+    Rectangle {
+        x: -3px; y: -3px;
+        width: root.width + 6px;
+        height: root.height + 6px;
+        border-radius: root.radius + 3px;
+        border-width: 2px;
+        border-color: Pal.bone;
+    }
+}
+
+component Section inherits Text {
+    font-family: Pal.font-head;
+    color: Pal.gold;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: 2px;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Buttons
+// ---------------------------------------------------------------------------------------------------------------
 
 component TabButton inherits Rectangle {
     in property <string> label;
+    in property <image> icon;
     in property <bool> active;
     callback clicked;
-    height: 34px;
-    border-radius: 17px;
-    background: active ? @linear-gradient(180deg, Pal.portal-hi 0%, Pal.portal-lo 100%) : (ta.has-hover ? #8dff3c26 : transparent);
-    animate background { duration: 140ms; }
-    Text {
-        text: root.label;
-        color: root.active ? Pal.on-portal : Pal.text;
-        font-size: 15px;
-        font-family: Pal.font-head;
-        font-weight: 600;
-        horizontal-alignment: center;
-        vertical-alignment: center;
+    property <bool> kbd: false;
+    height: 36px;
+    width: tab-row.preferred-width + 34px;
+    border-radius: 10px;
+    background: root.active ? @linear-gradient(180deg, Pal.portal-hi 0%, Pal.portal-lo 100%) : (ta.pressed ? #7dff3a30 : (ta.has-hover ? #7dff3a1c : transparent));
+    animate background { duration: Mo.fast; }
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-action-default => { root.clicked(); }
+    tab-row := HorizontalLayout {
+        alignment: center;
+        spacing: 8px;
+        Rectangle {
+            width: 16px;
+            Image {
+                source: root.icon;
+                y: (parent.height - 16px) / 2;
+                width: 16px; height: 16px;
+                colorize: root.active ? Pal.on-portal : (ta.has-hover ? Pal.portal-hi : Pal.text-dim);
+            }
+        }
+        Text {
+            text: root.label;
+            color: root.active ? Pal.on-portal : (ta.has-hover ? Pal.text : Pal.text-dim);
+            font-size: Fs.lead;
+            font-family: Pal.font-head;
+            font-weight: 700;
+            vertical-alignment: center;
+        }
     }
-    ta := TouchArea { clicked => { root.clicked(); } }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+    fs := FocusScope {
+        width: parent.width; height: parent.height;
+        focus-on-click: false;
+        focus-gained(reason) => { root.kbd = reason == FocusReason.tab-navigation; }
+        focus-lost(reason) => { root.kbd = false; }
+        key-pressed(e) => {
+            if (e.text == " " || e.text == Key.Return) { root.clicked(); return accept; }
+            return reject;
+        }
+    }
+    FocusRing { width: parent.width; height: parent.height; shown: root.kbd; radius: 10px; }
 }
 
-// Portal button. The primary one is a pool of swirling portal energy (two counter-turning layers of the same
-// vortex under the label); the secondary one is dark stone that lights up green when hovered.
+// The primary button is a stone-and-gold bezel around a pool of fel green light; the secondary one is dark stone that lights up green when hovered. Hover, pressed, focus,
+// disabled and loading are all drawn here. The label sits outside the clipped body so it never shimmers.
 component GlassButton inherits Rectangle {
     in property <string> label;
     in property <bool> primary: true;
     in property <bool> enabled: true;
+    // A light sweep runs across the button while something is under way.
+    in property <bool> loading: false;
     // The label fills the button: tall primary buttons (Play) pass a big size.
     in property <length> text-size: primary ? 22px : 17px;
     callback clicked;
+    property <bool> kbd: false;
+    property <length> bezel: primary ? 3px : 0px;
+    property <bool> live: root.enabled && !root.loading;
     height: 52px;
-    border-radius: self.height / 2;
-    opacity: enabled ? 1.0 : 0.45;
-    drop-shadow-blur: primary && enabled ? (ta.has-hover ? 28px : 16px) : 0px;
-    drop-shadow-color: primary && enabled ? #8dff3c80 : transparent;
-    drop-shadow-offset-y: 3px;
-    animate drop-shadow-blur { duration: 220ms; }
+    border-radius: root.primary ? min(16px, self.height / 3) : self.height / 2;
+    opacity: root.enabled ? 1.0 : 0.45;
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-action-default => { if (root.enabled) { root.clicked(); } }
 
-    body := Rectangle {
+    // Soft green light under the button (it has no children, so it is cheap to draw).
+    if root.primary && root.enabled : Rectangle {
+        width: parent.width; height: parent.height;
         border-radius: parent.border-radius;
-        clip: true;
-        background: primary ? #0a2a10 : (ta.pressed ? Pal.stone-press : (ta.has-hover ? Pal.stone-hi : Pal.stone));
-        animate background { duration: 140ms; }
-        if root.primary : Image {
-            source: @image-url("../assets/swirl.png");
-            width: max(root.width, 220px) * 1.5;
-            height: self.width;
-            x: (parent.width - self.width) / 2;
-            y: (parent.height - self.height) / 2;
-            rotation-angle: root.enabled ? 360deg * animation-tick() / 18s : 0deg;
-            opacity: ta.pressed ? 0.55 : (ta.has-hover ? 1.0 : 0.82);
-            animate opacity { duration: 200ms; }
-        }
-        if root.primary : Image {
-            source: @image-url("../assets/swirl.png");
-            width: max(root.width, 220px) * 1.1;
-            height: self.width;
-            x: (parent.width - self.width) / 2;
-            y: (parent.height - self.height) / 2;
-            rotation-angle: root.enabled ? -360deg * animation-tick() / 11s : 0deg;
-            opacity: ta.has-hover ? 0.55 : 0.38;
-            animate opacity { duration: 200ms; }
-        }
-        // keeps the label readable over the bright swirl
-        if root.primary : Rectangle {
-            background: @linear-gradient(90deg, #00000090 0%, #00000030 38%, #00000030 62%, #00000090 100%);
-        }
-        Rectangle {
-            border-radius: parent.border-radius;
-            border-width: primary ? 1.5px : 1px;
-            border-color: primary ? (ta.has-hover ? Pal.portal-hi : #bfff85a0) : (ta.has-hover ? Pal.portal-lo : Pal.rim);
-            animate border-color { duration: 140ms; }
+        background: #0a2a10;
+        drop-shadow-blur: ta.pressed ? 10px : (ta.has-hover || root.kbd || root.loading ? 30px : 18px);
+        drop-shadow-color: #7dff3a88;
+        drop-shadow-offset-y: 2px;
+        animate drop-shadow-blur { duration: Mo.base; }
+    }
+
+    frame := Rectangle {
+        border-radius: root.border-radius;
+        background: root.primary ? (ta.pressed ? @linear-gradient(180deg, #9a7a3a 0%, #6e4a14 55%, #3d2606 100%)
+                                               : @linear-gradient(180deg, ta.has-hover || root.kbd ? #fff2c8 : #f3dc9c 0%, #c4902f 50%, #6e4513 100%))
+                                : transparent;
+        animate background { duration: Mo.fast; }
+        body := Rectangle {
+            x: root.bezel; y: root.bezel;
+            width: parent.width - 2 * root.bezel;
+            height: parent.height - 2 * root.bezel;
+            border-radius: root.border-radius - root.bezel;
+            clip: true;
+            background: root.primary ? (ta.pressed ? #0d3a14 : (ta.has-hover ? #2c8a26 : #1f6e1e)) : (ta.pressed ? Pal.stone-press : (ta.has-hover ? Pal.stone-hi : Pal.stone));
+            animate background { duration: Mo.fast; }
+            // a soft light from the top, and a faint pulse of fel light from below
+            if root.primary : Rectangle {
+                background: @linear-gradient(180deg, #ffffff22 0%, #ffffff00 55%, #8dff3c30 100%);
+            }
+            if root.primary : Rectangle {
+                background: @linear-gradient(90deg, #00000070 0%, #00000000 30%, #00000000 70%, #00000070 100%);
+            }
+            // light sweep while loading
+            if root.loading : Rectangle {
+                width: 110px;
+                x: -110px + (parent.width + 110px) * (Mo.reduce ? 0.5 : mod(Mo.t / 1.4, 1.0));
+                background: @linear-gradient(90deg, #ffffff00 0%, #ffffff44 50%, #ffffff00 100%);
+            }
+            // inner rim
+            Rectangle {
+                border-radius: parent.border-radius;
+                border-width: 1px;
+                border-color: root.primary ? (ta.has-hover ? Pal.portal-hi : #bfff85a0) : (ta.has-hover ? Pal.portal-lo : Pal.rim);
+                animate border-color { duration: Mo.fast; }
+            }
         }
     }
     Text {
@@ -142,31 +316,61 @@ component GlassButton inherits Rectangle {
         font-family: root.primary ? Pal.font-black : Pal.font-head;
         font-weight: 800;
         letter-spacing: root.primary ? 3px : 1px;
-        // A dark outline keeps the label crisp over the bright swirl.
+        // A dark outline keeps the label crisp over the green.
         stroke: root.primary ? #031208 : transparent;
         stroke-width: root.primary ? max(1.5px, root.text-size / 19) : 0px;
         stroke-style: outside;
         horizontal-alignment: center;
         vertical-alignment: center;
-        // the label sits outside the clipped body: drawn inside the clip it shimmered as the swirl turned
         width: parent.width; height: parent.height;
     }
-    ta := TouchArea { enabled: root.enabled; clicked => { root.clicked(); } }
+    ta := TouchArea {
+        enabled: root.enabled && !root.loading;
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.default;
+        clicked => { root.clicked(); }
+    }
+    fs := FocusScope {
+        width: parent.width; height: parent.height;
+        enabled: root.enabled && !root.loading;
+        focus-on-click: false;
+        focus-gained(reason) => { root.kbd = reason == FocusReason.tab-navigation; }
+        focus-lost(reason) => { root.kbd = false; }
+        key-pressed(e) => {
+            if (e.text == " " || e.text == Key.Return) { root.clicked(); return accept; }
+            return reject;
+        }
+    }
+    FocusRing { width: parent.width; height: parent.height; shown: root.kbd; radius: root.border-radius; }
 }
 
 component PresetPill inherits Rectangle {
     in property <string> label;
     in property <bool> active: false;
     callback clicked;
+    property <bool> kbd: false;
     height: 30px;
     width: t.preferred-width + 28px;
     border-radius: 15px;
-    background: active ? #8dff3c38 : (ta.pressed ? #8dff3c45 : (ta.has-hover ? #8dff3c26 : #ffffff14));
+    background: active ? #7dff3a38 : (ta.pressed ? #7dff3a45 : (ta.has-hover ? #7dff3a26 : #ffffff14));
     border-width: 1px;
     border-color: active ? Pal.portal : (ta.has-hover ? Pal.portal-lo : Pal.line);
-    animate background, border-color { duration: 120ms; }
-    t := Text { text: root.label; color: Pal.text; font-size: 13px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
-    ta := TouchArea { clicked => { root.clicked(); } }
+    animate background, border-color { duration: Mo.fast; }
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-action-default => { root.clicked(); }
+    t := Text { text: root.label; color: Pal.text; font-size: Fs.body; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+    fs := FocusScope {
+        width: parent.width; height: parent.height;
+        focus-on-click: false;
+        focus-gained(reason) => { root.kbd = reason == FocusReason.tab-navigation; }
+        focus-lost(reason) => { root.kbd = false; }
+        key-pressed(e) => {
+            if (e.text == " " || e.text == Key.Return) { root.clicked(); return accept; }
+            return reject;
+        }
+    }
+    FocusRing { width: parent.width; height: parent.height; shown: root.kbd; radius: 15px; }
 }
 
 // Controlled checkbox: it shows `checked` and reports clicks; the owner flips the value.
@@ -175,10 +379,15 @@ component Check inherits Rectangle {
     in property <string> label;
     in property <string> hint;
     callback toggled;
+    property <bool> kbd: false;
     height: 48px;
-    border-radius: 12px;
+    border-radius: Rad.md;
     background: ta.has-hover ? #ffffff14 : transparent;
-    animate background { duration: 120ms; }
+    animate background { duration: Mo.fast; }
+    accessible-role: checkbox;
+    accessible-label: root.label;
+    accessible-checked: root.checked;
+    accessible-action-default => { root.toggled(); }
     HorizontalLayout {
         padding-left: 12px;
         padding-right: 12px;
@@ -192,33 +401,33 @@ component Check inherits Rectangle {
             border-width: 2px;
             border-color: root.checked ? Pal.portal : #ffffff88;
             background: root.checked ? Pal.portal : transparent;
-            animate background, border-color { duration: 140ms; }
-            Text {
-                text: "✓";
+            animate background, border-color { duration: Mo.fast; }
+            Image {
                 visible: root.checked;
-                color: Pal.on-portal;
-                font-size: 15px;
-                font-weight: 800;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+                source: @image-url("../assets/icons/check.png");
+                x: 3px; y: 3px; width: 16px; height: 16px;
+                colorize: Pal.on-portal;
             }
         }
         VerticalLayout {
             alignment: center;
             horizontal-stretch: 1;
-            Text { text: root.label; color: Pal.text; font-size: 14px; font-weight: 600; overflow: elide; }
-            Text { text: root.hint; color: Pal.text-dim; font-size: 11px; overflow: elide; visible: root.hint != ""; }
+            Text { text: root.label; color: Pal.text; font-size: Fs.base; font-weight: 600; overflow: elide; }
+            Text { text: root.hint; color: Pal.text-dim; font-size: Fs.caption; wrap: word-wrap; overflow: elide; max-height: 30px; visible: root.hint != ""; }
         }
     }
-    ta := TouchArea { clicked => { root.toggled(); } }
-}
-
-component Section inherits Text {
-    font-family: Pal.font-head;
-    color: Pal.gold;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 1.5px;
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.toggled(); } }
+    fs := FocusScope {
+        width: parent.width; height: parent.height;
+        focus-on-click: false;
+        focus-gained(reason) => { root.kbd = reason == FocusReason.tab-navigation; }
+        focus-lost(reason) => { root.kbd = false; }
+        key-pressed(e) => {
+            if (e.text == " " || e.text == Key.Return) { root.toggled(); return accept; }
+            return reject;
+        }
+    }
+    FocusRing { width: parent.width; height: parent.height; shown: root.kbd; radius: Rad.md; }
 }
 
 component Field inherits Rectangle {
@@ -227,18 +436,18 @@ component Field inherits Rectangle {
     in property <bool> invalid: false;
     callback edited(string);
     height: 44px;
-    border-radius: 12px;
+    border-radius: Rad.md;
     background: #00000045;
     border-width: 1px;
-    border-color: root.invalid ? #ff8a80 : (input.has-focus ? Pal.portal : Pal.line);
-    animate border-color { duration: 120ms; }
+    border-color: root.invalid ? Pal.danger : (input.has-focus ? Pal.portal : Pal.line);
+    animate border-color { duration: Mo.fast; }
     Text {
         x: 14px;
         width: parent.width - 28px;
         text: root.placeholder;
         visible: root.text == "";
         color: Pal.text-dim;
-        font-size: 15px;
+        font-size: Fs.base + 1px;
         vertical-alignment: center;
     }
     input := TextInput {
@@ -247,11 +456,12 @@ component Field inherits Rectangle {
         height: parent.height;
         text <=> root.text;
         color: Pal.text;
-        font-size: 15px;
+        font-size: Fs.base + 1px;
         vertical-alignment: center;
         single-line: true;
         selection-background-color: #6fe02a80;
         selection-foreground-color: #ffffff;
+        accessible-label: root.placeholder;
         edited => { root.edited(self.text); }
     }
 }
@@ -264,12 +474,12 @@ component ApplyBar inherits HorizontalLayout {
     in property <bool> can-apply: true;
     callback reset;
     callback apply;
-    spacing: 12px;
+    spacing: Sp.md;
     alignment: end;
     Text {
         text: root.message;
         color: root.dirty ? Pal.warn : Pal.text-dim;
-        font-size: 13px;
+        font-size: Fs.body;
         vertical-alignment: center;
         overflow: elide;
         horizontal-stretch: 1;
@@ -283,27 +493,230 @@ component StatusDot inherits Rectangle {
     width: 12px;
     height: 12px;
     border-radius: 6px;
-    background: level == 0 ? #5ad18a : (level == 1 ? #ffd98a : #ff6b6b);
+    background: level == 0 ? #5ad18a : (level == 1 ? Pal.warn : Pal.danger);
 }
 
-// A thin carved divider: an amber line that fades out at both ends with a diamond in the middle.
-component Ornament inherits Rectangle {
-    height: 16px;
-    HorizontalLayout {
-        alignment: center;
-        spacing: 10px;
-        Rectangle { width: 120px; height: 1px; y: 8px; background: @linear-gradient(90deg, #ffb34700 0%, #ffb347c0 100%); }
-        Path { width: 14px; height: 14px; y: 1px; viewbox-width: 14; viewbox-height: 14; commands: "M 7 0 L 14 7 L 7 14 L 0 7 Z"; fill: Pal.gold; }
-        Rectangle { width: 120px; height: 1px; y: 8px; background: @linear-gradient(90deg, #ffb347c0 0%, #ffb34700 100%); }
+// The portal opening, animated: a vortex texture (assets/make-portal.py) turns slowly inside a clipped box that
+// matches the opening, a second copy turns the other way, and the painted rim is laid back on top so the stone
+// edge stays put. Positions are in artwork pixels (1536 x 1024) times `sc`, from the scene's top-left (`ax`, `ay`).
+component PortalLayer inherits Rectangle {
+    in property <image> vortex;
+    in property <image> rim;
+    in property <float> sc: 1.0;
+    in property <length> ax;
+    in property <length> ay;
+    // the clipped box (left 626, top 378, 328 x 464) and the vortex's eye (810, 620)
+    width: 0px; height: 0px;
+    Rectangle {
+        x: root.ax + 626px * root.sc; y: root.ay + 378px * root.sc;
+        width: 328px * root.sc; height: 464px * root.sc;
+        clip: true;
+        Image {
+            source: root.vortex;
+            width: 600px * root.sc; height: self.width;
+            x: (810px - 626px) * root.sc - self.width / 2; y: (620px - 378px) * root.sc - self.height / 2;
+            transform-rotation: Mo.t * 7deg;
+        }
+        Image {
+            source: root.vortex;
+            width: 460px * root.sc; height: self.width;
+            x: (810px - 626px) * root.sc - self.width / 2; y: (620px - 378px) * root.sc - self.height / 2;
+            transform-rotation: -Mo.t * 10deg;
+            opacity: 0.4;
+        }
+    }
+    Image {
+        source: root.rim;
+        x: root.ax + 622px * root.sc; y: root.ay + 374px * root.sc;
+        width: 336px * root.sc; height: 472px * root.sc;
     }
 }
+
+// Weathered black metal window frame with a little fel green glow (pictures from assets/make-frame.py: four
+// corners and four edge strips that stretch between them), plus a row of rivets along each side. Nothing moves.
+component MetalFrame inherits Rectangle {
+    property <int> nx: floor(root.width / 62px);
+    property <int> ny: floor(root.height / 62px);
+    Image { source: @image-url("../assets/frame/edge-top.png"); x: 60px; y: 0px; width: root.width - 120px; height: 34px; image-fit: fill; }
+    Image { source: @image-url("../assets/frame/edge-bottom.png"); x: 60px; y: root.height - 34px; width: root.width - 120px; height: 34px; image-fit: fill; }
+    Image { source: @image-url("../assets/frame/edge-left.png"); x: 0px; y: 60px; width: 34px; height: root.height - 120px; image-fit: fill; }
+    Image { source: @image-url("../assets/frame/edge-right.png"); x: root.width - 34px; y: 60px; width: 34px; height: root.height - 120px; image-fit: fill; }
+    Image { source: @image-url("../assets/frame/corner-tl.png"); x: 0px; y: 0px; width: 60px; height: 60px; }
+    Image { source: @image-url("../assets/frame/corner-tr.png"); x: root.width - 60px; y: 0px; width: 60px; height: 60px; }
+    Image { source: @image-url("../assets/frame/corner-bl.png"); x: 0px; y: root.height - 60px; width: 60px; height: 60px; }
+    Image { source: @image-url("../assets/frame/corner-br.png"); x: root.width - 60px; y: root.height - 60px; width: 60px; height: 60px; }
+    // rivets, set into the band (which runs from 5 to 20 px in)
+    for i in root.nx : Rectangle {
+        x: (i + 0.5) * root.width / root.nx - 3px; y: 9.5px; width: 6px; height: 6px; border-radius: 3px;
+        background: @radial-gradient(circle, #9a9aaa 0%, #30303a 65%, #0a0a0d 100%);
+    }
+    for i in root.nx : Rectangle {
+        x: (i + 0.5) * root.width / root.nx - 3px; y: root.height - 15.5px; width: 6px; height: 6px; border-radius: 3px;
+        background: @radial-gradient(circle, #9a9aaa 0%, #30303a 65%, #0a0a0d 100%);
+    }
+    for i in root.ny : Rectangle {
+        y: (i + 0.5) * root.height / root.ny - 3px; x: 9.5px; width: 6px; height: 6px; border-radius: 3px;
+        background: @radial-gradient(circle, #9a9aaa 0%, #30303a 65%, #0a0a0d 100%);
+    }
+    for i in root.ny : Rectangle {
+        y: (i + 0.5) * root.height / root.ny - 3px; x: root.width - 15.5px; width: 6px; height: 6px; border-radius: 3px;
+        background: @radial-gradient(circle, #9a9aaa 0%, #30303a 65%, #0a0a0d 100%);
+    }
+}
+
+// Round glass button for the header (minimize, maximize, close), with a tooltip.
+component HeaderButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> glyph;
+    in property <string> tip;
+    in property <color> hover-color: #ffffff44;
+    in property <bool> right-aligned: false;
+    callback clicked;
+    property <bool> kbd: false;
+    width: 32px; height: 32px; border-radius: 16px;
+    background: ta.has-hover ? root.hover-color : Pal.chrome;
+    animate background { duration: Mo.fast; }
+    accessible-role: button;
+    accessible-label: root.tip;
+    accessible-action-default => { root.clicked(); }
+    Image {
+        visible: root.glyph == "";
+        source: root.icon;
+        x: 9px; y: 9px; width: 14px; height: 14px;
+        colorize: Pal.text;
+    }
+    Text { visible: root.glyph != ""; text: root.glyph; color: Pal.text; font-size: 16px; horizontal-alignment: center; vertical-alignment: center; }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+    fs := FocusScope {
+        width: parent.width; height: parent.height;
+        focus-on-click: false;
+        focus-gained(reason) => { root.kbd = reason == FocusReason.tab-navigation; }
+        focus-lost(reason) => { root.kbd = false; }
+        key-pressed(e) => {
+            if (e.text == " " || e.text == Key.Return) { root.clicked(); return accept; }
+            return reject;
+        }
+    }
+    FocusRing { width: parent.width; height: parent.height; shown: root.kbd; radius: 16px; }
+    Tip { width: parent.width; height: parent.height; text: root.tip; shown: ta.has-hover || root.kbd; right-aligned: root.right-aligned; }
+}
+
+// Small spinner-free "busy" marker for the status bar: three dots that pulse in turn.
+component BusyDots inherits Rectangle {
+    width: 22px; height: 8px;
+    for i in 3 : Rectangle {
+        x: i * 8px; width: 6px; height: 6px; y: 1px; border-radius: 3px;
+        background: Pal.gold;
+        opacity: Mo.reduce ? 0.8 : 0.25 + 0.75 * max(0.0, sin(360deg * (Mo.t / 1.2 - i * 0.18)));
+    }
+}
+
+// A chevron that points right when folded and down when open.
+component Chevron inherits Rectangle {
+    in property <bool> open;
+    in property <color> tint: Pal.text-dim;
+    width: 12px; height: 12px;
+    Path {
+        width: parent.width; height: parent.height;
+        viewbox-width: 12; viewbox-height: 12;
+        commands: root.open ? "M 2 4 L 6 8 L 10 4" : "M 4 2 L 8 6 L 4 10";
+        stroke: root.tint; stroke-width: 1.6px; stroke-line-cap: round;
+    }
+}
+
+// A release in the What's New card: the heading row (always shown) folds its notes away when clicked.
+component ReleaseHeader inherits Rectangle {
+    in property <string> tag;
+    in property <string> title;
+    in property <string> date;
+    in property <bool> latest;
+    in property <bool> installed;
+    in property <bool> open;
+    callback clicked;
+    property <bool> kbd: false;
+    height: 52px;
+    border-radius: Rad.sm;
+    background: ta.has-hover ? #ffffff12 : transparent;
+    animate background { duration: Mo.fast; }
+    accessible-role: button;
+    accessible-label: root.tag + " " + root.title + (root.installed ? ", installed" : "");
+    accessible-expanded: root.open;
+    accessible-action-default => { root.clicked(); }
+    VerticalLayout {
+        padding-left: 6px; padding-right: 6px; padding-top: 6px; padding-bottom: 6px;
+        spacing: 4px;
+        HorizontalLayout {
+            spacing: 6px;
+            // version badge; a check mark inside it means this is the installed release
+            Rectangle {
+                width: badge-row.preferred-width + 18px; height: 22px;
+                border-radius: 11px;
+                background: root.open ? #7dff3a26 : #ffffff10;
+                border-width: 1px;
+                border-color: root.installed ? Pal.portal : (root.open ? Pal.portal-lo : Pal.line);
+                badge-row := HorizontalLayout {
+                    alignment: center; spacing: 4px;
+                    if root.installed : Rectangle { width: 10px; Image { source: @image-url("../assets/icons/check.png"); y: (parent.height - 10px) / 2; width: 10px; height: 10px; colorize: Pal.portal; } }
+                    Text { text: root.tag; color: root.open ? Pal.portal-hi : Pal.text; font-size: Fs.body; font-weight: 700; vertical-alignment: center; }
+                }
+            }
+            if root.latest : Text { text: "LATEST"; color: Pal.gold; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; vertical-alignment: center; }
+            Rectangle { horizontal-stretch: 1; }
+            Text { text: root.date; color: Pal.text-dim; font-size: Fs.caption; vertical-alignment: center; }
+            Chevron { open: root.open; y: 5px; }
+        }
+        Text {
+            text: root.title;
+            color: root.open ? Pal.gold : Pal.text-dim;
+            font-size: Fs.body;
+            font-family: Pal.font-head;
+            font-weight: 700;
+            overflow: elide;
+            visible: root.title != "";
+        }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+    fs := FocusScope {
+        width: parent.width; height: parent.height;
+        focus-on-click: false;
+        focus-gained(reason) => { root.kbd = reason == FocusReason.tab-navigation; }
+        focus-lost(reason) => { root.kbd = false; }
+        key-pressed(e) => {
+            if (e.text == " " || e.text == Key.Return) { root.clicked(); return accept; }
+            return reject;
+        }
+    }
+    FocusRing { width: parent.width; height: parent.height; shown: root.kbd; radius: Rad.sm; }
+}
+
+// A titled block for the Game page: a heading, then whatever is put inside.
+component Card inherits Rectangle {
+    in property <string> title;
+    horizontal-stretch: 1;
+    border-radius: Rad.lg;
+    background: #00000040;
+    border-width: 1px;
+    border-color: Pal.line;
+    VerticalLayout {
+        padding: 20px; padding-top: 16px;
+        spacing: 12px;
+        Section { text: root.title; height: 40px; vertical-alignment: center; }
+        @children
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Window
+// ---------------------------------------------------------------------------------------------------------------
 
 export component MainWindow inherits Window {
     // Frameless window with a transparent corner area; needs a compositing window manager.
     no-frame: true;
     background: transparent;
-    width: 1000px;
-    height: 640px;
+    preferred-width: 1500px;
+    preferred-height: 860px;
+    min-width: 960px;
+    min-height: 580px;
     title: "Realmgate";
     // The taskbar icon (X11 window icon); the portal artwork is used inside the launcher.
     icon: @image-url("../assets/taskbar.png");
@@ -319,17 +732,26 @@ export component MainWindow inherits Window {
     in property <string> quip;
     callback new-quip;
     callback play;
+    // The game was started; the launcher closes in a moment.
+    in property <bool> launching: false;
+    in property <string> play-error;
 
     // Updates. 0 nothing to show, 1 checking, 2 available, 3 asking for confirmation, 4 working, 5 failed
     in property <int> update-state: 0;
     in property <string> update-text;
+    // The last check could not reach GitHub.
+    in property <bool> update-offline: false;
     // After a failed update: the release is still known, so the button can try again.
     in property <bool> update-retry: false;
     in property <string> update-notes;
     in property <string> update-title;
     in property <float> update-progress: 0;
+    // The release the install records (`v0.2.13`), empty if unknown.
+    in property <string> installed-tag;
     in property <[ChangeRow]> changelog;
     in property <string> changelog-status;
+    // Which release's notes are open in the What's New card (-1: none).
+    in-out property <int> open-release: 0;
     callback check-update;
     callback ask-update;
     callback cancel-ask;
@@ -358,7 +780,7 @@ export component MainWindow inherits Window {
     callback reset-game;
 
     // Settings page
-    in-out property <[SettingRow]> settings;
+    in-out property <[SettingGroup]> setting-groups;
     in property <[string]> preset-names;
     in-out property <bool> dirty: false;
     in-out property <string> status: "";
@@ -377,6 +799,10 @@ export component MainWindow inherits Window {
     callback save-report;
     callback report-copied;
 
+    // Reduced motion (from the desktop's setting or the launcher's own choice); see the Mo global.
+    in property <bool> reduce-motion: false;
+    changed reduce-motion => { Mo.reduce = root.reduce-motion; }
+
     public function copy-report() {
         report-input.select-all();
         report-input.copy();
@@ -390,107 +816,393 @@ export component MainWindow inherits Window {
     callback toggle-theme;
     // Starts moving the window; the position is where the pointer went down.
     callback drag-window(float, float);
+    // Starts resizing from an edge: 0 N, 1 S, 2 W, 3 E, 4 NW, 5 NE, 6 SW, 7 SE, then the pointer position.
+    callback resize-window(int, float, float);
     // Opens one of the launcher's fixed links in the user's browser (the Rust side checks the URL).
     callback open-link(string);
+
+    property <bool> maxed: root.maximized;
+    // Offered on the Play page when something can be updated.
+    property <bool> update-offered: root.update-state == 2 || (root.update-state == 5 && root.update-retry);
+    property <bool> busy-update: root.update-state == 3 || root.update-state == 4;
 
     // Holds the report so the Copy button can use the system clipboard; one transparent pixel, never seen.
     report-input := TextInput { x: 0px; y: 0px; width: 1px; height: 1px; text: root.report-text; read-only: true; color: transparent; wrap: no-wrap; }
 
     // The content sits 5 px inside the window; the stone frame (below) covers the edge and the gap.
     shell := Rectangle {
-        x: 5px; y: 5px; width: parent.width - 10px; height: parent.height - 10px;
-        border-radius: 16px;
+        x: root.maxed ? 0px : 19px; y: root.maxed ? 0px : 19px;
+        width: parent.width - (root.maxed ? 0px : 38px);
+        height: parent.height - (root.maxed ? 0px : 38px);
+        border-radius: root.maxed ? 0px : 8px;
         clip: true;
         background: Pal.base;
 
+        // Layout shared by the pages: the scene (hero) on the left, the status chip and What's New on the right.
+        property <length> pad-l: Sp.gutter + 4px;
+        property <length> card-w: 344px;
+        property <length> hero-w: self.width - self.pad-l - 12px - self.card-w - 16px;
+        property <length> content-bottom: self.height - 12px;
+
+        // ---- the backdrop: the same picture as the hero, blurred and dimmed (day, with the night one fading over it) ----
         Image {
-            source: Pal.night ? @image-url("../assets/bg-night.jpg") : @image-url("../assets/bg-day.jpg");
-            width: parent.width;
-            height: parent.height;
+            // not drawn once the night picture covers it completely
+            visible: back-night.opacity < 0.999;
+            source: @image-url("../assets/bg-day.jpg");
+            width: parent.width; height: parent.height;
             image-fit: cover;
         }
-        // soft vignette so text stays readable
-        Rectangle { background: @linear-gradient(180deg, #00000030 0%, #00000000 30%, #0000004a 100%); }
+        back-night := Image {
+            visible: self.opacity > 0.001;
+            source: @image-url("../assets/bg-night.jpg");
+            width: parent.width; height: parent.height;
+            image-fit: cover;
+            opacity: Pal.night ? 1.0 : 0.0;
+            animate opacity { duration: Mo.slow; easing: ease-in-out; }
+        }
+        // soft vignette so the header and footer stay readable
+        Rectangle { background: @linear-gradient(180deg, #00000060 0%, #00000000 24%, #00000000 70%, #00000070 100%); }
 
-        // ---- header (drag area, logo, window buttons) ----
-        Rectangle {
-            x: 0; y: 0; width: parent.width; height: 84px;
-            TouchArea { pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.drag-window(self.mouse-x / 1px, self.mouse-y / 1px); } } }
-            HorizontalLayout {
-                padding-left: 34px; padding-right: 20px; padding-top: 22px; padding-bottom: 12px;
-                spacing: 14px;
-                // Room for the logo, which is drawn larger than the layout row (see the Image after this layout).
-                Rectangle { width: 102px; }
-                VerticalLayout {
-                    alignment: center;
-                    spacing: 2px;
-                    Text { text: "REALMGATE"; color: Pal.text; font-family: Pal.font-title; font-size: 30px; font-weight: 800; letter-spacing: 3px; stroke: #12072b; stroke-width: 3px; stroke-style: outside; }
-                    Text { text: "A Linux client reforged for modern systems."; color: Pal.text-dim; font-size: 12px; font-weight: 600; }
-                    Rectangle {
-                        height: 14px;
+        // ---- the Play page: the Dark Portal in a framed scene, everything else arranged around it ----
+        if root.tab == 0 : Rectangle {
+
+            // The scene. The artwork (1536 x 1024) is drawn "cover" and the effects follow it.
+            hero := Rectangle {
+                x: shell.pad-l; y: 156px;
+                width: shell.hero-w;
+                height: sentinel.y - 10px - 156px;
+                border-radius: Rad.lg;
+                clip: true;
+                background: #000000;
+                property <float> sc: max(self.width / 1536px, self.height / 1024px);
+                property <length> ax: (self.width - 1536px * self.sc) / 2;
+                // the top of the picture is cropped a little more than the bottom, which keeps the steps in view
+                property <length> ay: (self.height - 1024px * self.sc) * 0.62;
+
+                Image {
+                    visible: hero-night.opacity < 0.999;
+                    source: @image-url("../assets/hero-day.jpg");
+                    x: hero.ax; y: hero.ay;
+                    width: 1536px * hero.sc; height: 1024px * hero.sc;
+                }
+                hero-night := Image {
+                    visible: self.opacity > 0.001;
+                    source: @image-url("../assets/hero-night.jpg");
+                    x: hero.ax; y: hero.ay;
+                    width: 1536px * hero.sc; height: 1024px * hero.sc;
+                    opacity: Pal.night ? 1.0 : 0.0;
+                    animate opacity { duration: Mo.slow; easing: ease-in-out; }
+                }
+                // The whole portal opening swirls (day and night pictures each have their own layers).
+                PortalLayer {
+                    x: 0px; y: 0px;
+                    visible: hero-night.opacity < 0.999;
+                    vortex: @image-url("../assets/vortex-day.jpg"); rim: @image-url("../assets/edge-day.png");
+                    sc: hero.sc; ax: hero.ax; ay: hero.ay;
+                }
+                PortalLayer {
+                    x: 0px; y: 0px;
+                    visible: hero-night.opacity > 0.001;
+                    opacity: hero-night.opacity;
+                    vortex: @image-url("../assets/vortex-night.jpg"); rim: @image-url("../assets/edge-night.png");
+                    sc: hero.sc; ax: hero.ax; ay: hero.ay;
+                }
+                // Portal light: a slow pulse, steadier by day and brighter at night.
+                Rectangle {
+                    property <length> d: 1000px * hero.sc;
+                    width: self.d; height: self.d;
+                    x: hero.ax + 800px * hero.sc - self.d / 2;
+                    y: hero.ay + 610px * hero.sc - self.d / 2;
+                    border-radius: self.d / 2;
+                    background: @radial-gradient(circle, #8dff4a46 0%, #8dff4a20 38%, #8dff4a00 70%);
+                    opacity: (Pal.night ? 0.95 : 0.55) * (0.8 + 0.2 * sin(360deg * Mo.t / 5.0));
+                    animate opacity { duration: Mo.slow; }
+                }
+                // Embers off the two braziers, and a few green motes rising from the steps.
+                for i in 40 : Rectangle {
+                    property <float> period: 7.0 + mod(i * 1.3, 5.0);
+                    property <float> ph: mod(Mo.t / self.period + i * 0.173, 1.0);
+                    property <float> src: mod(i * 1.0, 10.0) < 4.5 ? 0.0 : (mod(i * 1.0, 10.0) < 9.0 ? 1.0 : 3.0);
+                    property <float> sx0: self.src < 1.0 ? 178.0 : (self.src < 2.0 ? 1262.0 : (self.src < 3.0 ? 190.0 : 800.0));
+                    property <float> sy0: self.src < 1.0 ? 720.0 : (self.src < 2.0 ? 715.0 : (self.src < 3.0 ? 705.0 : 880.0));
+                    visible: !Mo.reduce;
+                    width: (2.5 + mod(i * 1.0, 4.0)) * 1px * max(1.0, hero.sc * 1.3); height: self.width;
+                    border-radius: self.width / 2;
+                    x: hero.ax + (self.sx0 + sin(360deg * (self.ph * 1.6 + i * 0.31)) * 26.0 + mod(i * 13.0, 60.0) - 30.0) * 1px * hero.sc;
+                    y: hero.ay + (self.sy0 - self.ph * (300.0 + mod(i * 31.0, 220.0))) * 1px * hero.sc;
+                    background: self.src >= 3.0 ? #b6ff6e : (mod(i * 1.0, 3.0) < 1.0 ? #ffd27a : #ff8a2a);
+                    opacity: sin(180deg * self.ph) * (self.src >= 3.0 ? 0.75 : 1.0) * (Pal.night ? 1.0 : 0.75);
+                }
+                // shade under the Play block and at the top edge
+                Rectangle { background: @linear-gradient(180deg, #00000030 0%, #00000000 18%, #00000000 52%, #000000b0 100%); }
+
+                // the framed edge: drawn over the picture
+                Rectangle { border-radius: parent.border-radius; border-width: 1px; border-color: Pal.rim; }
+
+                // no client folder: say so in the middle of the scene
+                if !root.client-found : VerticalLayout {
+                    padding: 40px; spacing: 10px; alignment: center;
+                    Text { text: root.headline; color: Pal.text; font-size: 28px; font-family: Pal.font-head; font-weight: 800; wrap: word-wrap; horizontal-alignment: center; stroke: #0a0414; stroke-width: 2px; stroke-style: outside; }
+                    Text { text: root.subline; color: Pal.text; font-size: Fs.base; wrap: word-wrap; horizontal-alignment: center; stroke: #0a0414; stroke-width: 2px; stroke-style: outside; }
+                }
+
+                // asking for confirmation before anything is installed
+                if root.update-state == 3 : Rectangle {
+                    width: min(parent.width - 60px, 400px);
+                    height: 220px;
+                    x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
+                    border-radius: Rad.lg;
+                    background: Pal.card;
+                    border-width: 1px;
+                    border-color: Pal.rim;
+                    VerticalLayout {
+                        padding: 18px;
+                        spacing: 8px;
+                        Text { text: root.update-title; color: Pal.gold; font-family: Pal.font-head; font-size: 18px; font-weight: 800; }
+                        Text { text: root.update-notes; color: Pal.text; font-size: Fs.body; wrap: word-wrap; vertical-stretch: 1; overflow: elide; }
                         HorizontalLayout {
+                            spacing: 10px;
                             alignment: start;
-                            Text {
-                                text: "BY @GHOSTSUPTHERE";
-                                color: credit-ta.has-hover ? Pal.gold-hi : Pal.gold;
-                                font-size: 10px; font-weight: 700; letter-spacing: 4px;
-                                vertical-alignment: center;
-                                credit-ta := TouchArea { mouse-cursor: pointer; clicked => { root.open-link("https://github.com/Ghostsupthere"); } }
-                            }
+                            GlassButton { width: 180px; height: 42px; text-size: 19px; label: "UPDATE NOW"; clicked => { root.start-update(); } }
+                            GlassButton { width: 120px; height: 40px; primary: false; label: "Not now"; clicked => { root.cancel-ask(); } }
                         }
                     }
                 }
-                Rectangle { horizontal-stretch: 1; }
-                HorizontalLayout {
-                    spacing: 8px;
-                    alignment: end;
-                    // Day / night switch: the highlighted disc slides under the sun or the moon.
-                    Rectangle {
-                        width: 66px; height: 32px; border-radius: 16px;
-                        background: Pal.chrome;
-                        border-width: 1px;
-                        border-color: theme-ta.has-hover ? Pal.portal-lo : #ffffff26;
-                        animate border-color { duration: 120ms; }
+
+                // progress while downloading and installing
+                if root.update-state == 4 : Rectangle {
+                    width: min(parent.width - 60px, 400px);
+                    height: 84px;
+                    x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
+                    border-radius: Rad.lg;
+                    background: Pal.card;
+                    border-width: 1px;
+                    border-color: Pal.rim;
+                    VerticalLayout {
+                        padding: 18px;
+                        spacing: 10px;
+                        alignment: center;
                         Rectangle {
-                            y: 3px; width: 26px; height: 26px; border-radius: 13px;
-                            x: Pal.night ? 37px : 3px;
-                            background: Pal.night ? #7d9bff55 : #ffb34770;
-                            animate x { duration: 220ms; easing: ease-in-out; }
+                            height: 10px;
+                            border-radius: 5px;
+                            background: #ffffff22;
+                            clip: true;
+                            Rectangle {
+                                x: 0; width: parent.width * max(0.04, min(1.0, root.update-progress)); height: parent.height;
+                                border-radius: 5px;
+                                background: @linear-gradient(90deg, Pal.portal-lo 0%, Pal.portal-hi 100%);
+                                animate width { duration: Mo.base; }
+                            }
                         }
-                        Image { source: @image-url("../assets/sun.png"); x: 6px; y: 6px; width: 20px; height: 20px; opacity: Pal.night ? 0.5 : 1.0; animate opacity { duration: 200ms; } }
-                        Image { source: @image-url("../assets/moon.png"); x: 40px; y: 6px; width: 20px; height: 20px; opacity: Pal.night ? 1.0 : 0.5; animate opacity { duration: 200ms; } }
-                        theme-ta := TouchArea { clicked => { root.toggle-theme(); } }
+                        Text { text: root.update-text; color: Pal.text-dim; font-size: Fs.body; overflow: elide; }
                     }
-                    Rectangle {
-                        width: 78px; height: 32px; border-radius: 16px;
-                        background: wiki-ta.has-hover ? Pal.gold : Pal.chrome;
-                        animate background { duration: 120ms; }
-                        Text { text: "Wiki ↗"; color: wiki-ta.has-hover ? Pal.on-gold : Pal.text; font-size: 13px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
-                        wiki-ta := TouchArea { clicked => { root.open-link("https://wiki.downloadautism.com/"); } }
+                }
+
+                // the Play block, at the foot of the scene
+                if root.client-found && !root.busy-update : VerticalLayout {
+                    padding-bottom: 20px; spacing: 10px; alignment: end;
+                    if root.game-running || root.update-state == 5 || root.play-error != "" : Text {
+                        text: root.play-error != "" ? root.play-error : (root.game-running ? "The game is running." : root.update-text);
+                        color: Pal.warn;
+                        font-size: Fs.body;
+                        wrap: word-wrap;
+                        horizontal-alignment: center;
+                        stroke: #0a0414; stroke-width: 2px; stroke-style: outside;
                     }
-                    Rectangle {
-                        width: 32px; height: 32px; border-radius: 16px;
-                        background: min-ta.has-hover ? #ffffff44 : Pal.chrome;
-                        Text { text: "–"; color: Pal.text; font-size: 18px; horizontal-alignment: center; vertical-alignment: center; }
-                        min-ta := TouchArea { clicked => { root.minimize-requested(); } }
+                    Text {
+                        text: root.launching ? "STEPPING THROUGH" : (root.update-offered ? "AN UPDATE AWAITS" : "THE PORTAL IS OPEN");
+                        color: Pal.gold;
+                        font-family: Pal.font-head;
+                        font-size: Fs.lead;
+                        letter-spacing: 5px;
+                        horizontal-alignment: center;
+                        stroke: #0a0414;
+                        stroke-width: 2.5px;
+                        stroke-style: outside;
                     }
+                    HorizontalLayout {
+                        alignment: center;
+                        spacing: 12px;
+                        GlassButton {
+                            width: root.update-offered ? 220px : 270px;
+                            height: 76px;
+                            text-size: root.launching ? 27px : (root.update-state == 2 ? 36px : (root.update-state == 5 && root.update-retry ? 28px : 44px));
+                            label: root.launching ? "LAUNCHING" : (root.update-state == 2 ? "UPDATE" : (root.update-state == 5 && root.update-retry ? "TRY AGAIN" : "PLAY"));
+                            enabled: root.client-found && !root.game-running;
+                            loading: root.launching;
+                            clicked => { if (root.update-offered) { root.ask-update(); } else { root.play(); } }
+                        }
+                        if root.update-offered : GlassButton {
+                            width: 130px;
+                            height: 52px;
+                            y: 12px;
+                            primary: false;
+                            text-size: 15px;
+                            label: "Play anyway";
+                            enabled: root.client-found && !root.game-running;
+                            clicked => { root.play(); }
+                        }
+                    }
+                }
+            }
+
+            // The sentinel from the taskbar icon, with something to say. Click it for another line.
+            sentinel := Rectangle {
+                visible: !root.busy-update && root.quip != "";
+                x: shell.pad-l;
+                y: shell.content-bottom - self.height;
+                width: shell.hero-w;
+                height: 60px;
+                border-radius: Rad.md;
+                background: Pal.card;
+                border-width: 1px;
+                border-color: Pal.rim;
+                property <bool> kbd: false;
+                accessible-role: button;
+                accessible-label: "Sentinel: " + root.quip;
+                accessible-description: "Press for another line";
+                accessible-action-default => { root.new-quip(); }
+                // a thin gold line along the top edge, like an inlaid strip
+                Rectangle { x: 20px; y: 0px; width: parent.width - 40px; height: 1px; background: @linear-gradient(90deg, #e6c27a00 0%, #e6c27a90 50%, #e6c27a00 100%); }
+                // the head floats up out of the strip
+                Image {
+                    source: @image-url("../assets/taskbar.png");
+                    width: 112px; height: 112px;
+                    x: 6px;
+                    y: -50px + 3px * sin(360deg * Mo.t / 3.2);
+                    image-fit: contain;
+                }
+                Text {
+                    x: 128px; y: 0px;
+                    width: parent.width - 128px - 18px; height: parent.height;
+                    text: root.quip;
+                    color: Pal.text;
+                    font-size: Fs.base;
+                    font-italic: true;
+                    wrap: word-wrap;
+                    vertical-alignment: center;
+                }
+                sentinel-ta := TouchArea { mouse-cursor: pointer; clicked => { root.new-quip(); } }
+                FocusScope {
+                    width: parent.width; height: parent.height;
+                    focus-on-click: false;
+                    focus-gained(reason) => { sentinel.kbd = reason == FocusReason.tab-navigation; }
+                    focus-lost(reason) => { sentinel.kbd = false; }
+                    key-pressed(e) => {
+                        if (e.text == " " || e.text == Key.Return) { root.new-quip(); return accept; }
+                        return reject;
+                    }
+                }
+                FocusRing { width: parent.width; height: parent.height; shown: sentinel.kbd; radius: Rad.md; }
+            }
+
+            // ---- What's New: the current release up front, older ones folded below it ----
+            Rectangle {
+                x: shell.width - 12px - self.width;
+                y: 156px;
+                width: shell.card-w;
+                height: shell.content-bottom - 156px;
+                border-radius: Rad.lg;
+                background: Pal.card;
+                border-width: 1px;
+                border-color: Pal.rim;
+                clip: true;
+                // an inlaid strip along the top
+                Rectangle { x: 24px; y: 0px; width: parent.width - 48px; height: 1px; background: @linear-gradient(90deg, #e6c27a00 0%, #e6c27aa0 50%, #e6c27a00 100%); }
+                VerticalLayout {
+                    padding: 14px; padding-bottom: 10px;
+                    spacing: 6px;
                     Rectangle {
-                        width: 32px; height: 32px; border-radius: 16px;
-                        background: close-ta.has-hover ? #e5484d : Pal.chrome;
-                        animate background { duration: 120ms; }
-                        Text { text: "✕"; color: Pal.text; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
-                        close-ta := TouchArea { clicked => { root.close-requested(); } }
+                        height: 32px;
+                        Section { x: 2px; text: "WHAT'S NEW"; height: parent.height; vertical-alignment: center; font-size: Fs.title; letter-spacing: 2px; }
+                    }
+                    if root.changelog-status != "" : Text {
+                        text: root.changelog-status;
+                        color: Pal.text-dim;
+                        font-size: Fs.body;
+                        wrap: word-wrap;
+                    }
+                    log-area := Rectangle {
+                        vertical-stretch: 1;
+                        clip: true;
+                        log-flick := Flickable {
+                            content-width: parent.width;
+                            content-height: log-list.preferred-height;
+                            log-list := VerticalLayout {
+                                spacing: 3px;
+                                padding-right: 10px;
+                                for row in root.changelog : VerticalLayout {
+                                    spacing: 2px;
+                                    if row.kind == 0 : VerticalLayout {
+                                        padding-top: row.release == 0 ? 0px : 4px;
+                                        if row.release > 0 : Rectangle { height: 1px; background: @linear-gradient(90deg, #e6c27a00 0%, #e6c27a50 50%, #e6c27a00 100%); }
+                                        ReleaseHeader {
+                                            tag: row.text; title: row.title; date: row.date;
+                                            latest: row.latest; installed: row.installed;
+                                            open: root.open-release == row.release;
+                                            clicked => { root.open-release = root.open-release == row.release ? -1 : row.release; }
+                                        }
+                                    }
+                                    if row.kind == 1 && row.release == root.open-release : HorizontalLayout {
+                                        spacing: 8px;
+                                        padding-left: 10px;
+                                        Path { width: 7px; y: 5px; height: 7px; viewbox-width: 14; viewbox-height: 14; commands: "M 7 0 L 14 7 L 7 14 L 0 7 Z"; fill: Pal.gold; }
+                                        Text { text: row.text; color: Pal.text; font-size: Fs.base; font-weight: 700; wrap: word-wrap; horizontal-stretch: 1; }
+                                    }
+                                    if row.kind == 2 && row.release == root.open-release : Text { text: row.text; color: Pal.text-dim; font-size: Fs.body; wrap: word-wrap; x: 0px; }
+                                    if row.kind == 3 && row.release == root.open-release : HorizontalLayout {
+                                        spacing: 6px;
+                                        padding-left: 12px;
+                                        Text { text: "•"; color: Pal.gold; font-size: Fs.small; vertical-alignment: top; }
+                                        Text { text: row.text; color: Pal.text-dim; font-size: Fs.body; wrap: word-wrap; horizontal-stretch: 1; }
+                                    }
+                                }
+                            }
+                        }
+                        if log-flick.content-height > log-flick.height : Rectangle {
+                            x: parent.width - 4px;
+                            width: 3px;
+                            border-radius: 2px;
+                            background: #ffffff50;
+                            height: max(36px, log-flick.height * log-flick.height / log-flick.content-height);
+                            y: -log-flick.content-y / (log-flick.content-height - log-flick.height) * (log-flick.height - self.height);
+                        }
+                    }
+                    // older patch notes beyond the three shown here live on the releases page
+                    rel-link := Rectangle {
+                        height: 26px;
+                        property <bool> kbd: false;
+                        accessible-role: button;
+                        accessible-label: "All releases on GitHub";
+                        accessible-action-default => { root.open-link("https://github.com/Ghostsupthere/fta-linux-client/releases"); }
+                        HorizontalLayout {
+                            alignment: start;
+                            spacing: 6px;
+                            Text { text: "All releases"; color: rel-ta.has-hover || rel-link.kbd ? Pal.gold-hi : Pal.gold; font-size: Fs.small; font-weight: 700; vertical-alignment: center; }
+                            Rectangle { width: 12px; Image { source: @image-url("../assets/icons/external.png"); y: (parent.height - 11px) / 2; width: 11px; height: 11px; colorize: rel-ta.has-hover ? Pal.gold-hi : Pal.gold; } }
+                        }
+                        rel-ta := TouchArea { mouse-cursor: pointer; clicked => { root.open-link("https://github.com/Ghostsupthere/fta-linux-client/releases"); } }
+                        FocusScope {
+                            width: parent.width; height: parent.height;
+                            focus-on-click: false;
+                            focus-gained(reason) => { parent.kbd = reason == FocusReason.tab-navigation; }
+                            focus-lost(reason) => { parent.kbd = false; }
+                            key-pressed(e) => {
+                                if (e.text == " " || e.text == Key.Return) { root.open-link("https://github.com/Ghostsupthere/fta-linux-client/releases"); return accept; }
+                                return reject;
+                            }
+                        }
                     }
                 }
             }
         }
 
-        // ---- frosted glass panel ----
-        panel := Rectangle {
-            x: 40px; y: 96px;
-            width: parent.width - 80px;
-            height: parent.height - 96px - 40px;
-            border-radius: 22px;
+        // ---- Game, Settings and Diagnostics: a frosted panel over the same scene ----
+        if root.tab != 0 : panel := Rectangle {
+            x: Sp.gutter; y: 156px;
+            width: parent.width - 2 * Sp.gutter;
+            height: shell.content-bottom - 156px;
+            border-radius: Rad.xl;
             clip: true;
             // Same picture, pre-blurred, aligned with the sharp one so it reads as frosted glass.
             Image {
@@ -501,449 +1213,462 @@ export component MainWindow inherits Window {
             }
             Rectangle { background: Pal.glass; }
             Rectangle {
-                border-radius: 22px;
+                border-radius: Rad.xl;
                 border-width: 1px;
                 border-color: Pal.line;
             }
 
-            VerticalLayout {
-                padding: 26px;
-                padding-bottom: 22px;
-                spacing: 16px;
-
-                // pill tabs (moved down a little to clear the logo's glow)
+            // ---- Game page: three cards across the panel ----
+            if root.tab == 1 : VerticalLayout {
+                padding: 24px; padding-top: 22px; padding-bottom: 18px;
+                spacing: 14px;
+                Rectangle { vertical-stretch: 1; }
                 HorizontalLayout {
-                    alignment: start;
-                    padding-top: 12px;
-                    Rectangle {
-                        background: #ffffff14; border-radius: 21px; width: 440px; height: 42px;
+                    height: 420px;
+                    spacing: 18px;
+                    Card {
+                        title: "SERVER";
+                        Text { text: "Realm address"; color: Pal.text; font-size: Fs.base + 1px; font-weight: 700; }
+                        Field {
+                            height: 50px;
+                            text <=> root.game-realm;
+                            placeholder: "for example 192.168.1.5 or play.example.org";
+                            invalid: root.game-realm-bad;
+                            edited(t) => { root.game-realm-edited(t); }
+                        }
+                        Text { text: "The address of the server you play on."; color: Pal.text-dim; font-size: Fs.body; wrap: word-wrap; }
+                        Rectangle { vertical-stretch: 1; }
+                        Text { text: "Written to realmlist.wtf and Config.wtf together."; color: Pal.text-dim; font-size: Fs.small; wrap: word-wrap; }
+                    }
+                    Card {
+                        title: "DISPLAY";
+                        Check { height: 60px; label: "Windowed"; hint: "Off runs the game fullscreen"; checked: root.game-windowed; toggled => { root.game-toggle-windowed(); } }
+                        Check { height: 60px; label: "Vertical sync"; hint: "Stops tearing; may add input lag"; checked: root.game-vsync; toggled => { root.game-toggle-vsync(); } }
+                        Rectangle { height: 8px; }
+                        Text { text: "Anti-aliasing"; color: Pal.text; font-size: Fs.base + 1px; font-weight: 700; }
                         HorizontalLayout {
-                            padding: 4px; spacing: 4px;
-                            TabButton { label: "Play"; active: root.tab == 0; clicked => { root.tab = 0; } }
-                            TabButton { label: "Game"; active: root.tab == 1; clicked => { root.tab = 1; } }
-                            TabButton { label: "Settings"; active: root.tab == 2; clicked => { root.tab = 2; } }
-                            TabButton { label: "Diagnostics"; active: root.tab == 3; clicked => { root.tab = 3; } }
+                            spacing: 8px;
+                            alignment: start;
+                            for n in root.msaa-choices : PresetPill {
+                                height: 36px; width: 72px;
+                                label: n == 1 ? "Off" : n + "x";
+                                active: root.game-msaa == n;
+                                clicked => { root.game-set-msaa(n); }
+                            }
                         }
+                        Rectangle { vertical-stretch: 1; }
+                        Text { text: "Smoother edges cost some speed."; color: Pal.text-dim; font-size: Fs.small; wrap: word-wrap; }
+                    }
+                    Card {
+                        title: "RESOLUTION";
+                        Text { text: "Width x height"; color: Pal.text; font-size: Fs.base + 1px; font-weight: 700; }
+                        Field {
+                            height: 50px;
+                            text <=> root.game-resolution;
+                            placeholder: "like 1920x1080";
+                            invalid: root.game-resolution-bad;
+                            edited(t) => { root.game-resolution-edited(t); }
+                        }
+                        Rectangle {
+                            height: 90px;
+                            for r[i] in root.resolution-presets : PresetPill {
+                                x: mod(i, 3) * 112px; y: floor(i / 3) * 44px;
+                                width: 104px; height: 36px;
+                                label: r;
+                                active: root.game-resolution == r;
+                                clicked => { root.game-pick-resolution(r); }
+                            }
+                        }
+                        Rectangle { vertical-stretch: 1; }
+                        Text { text: "Pick a common size or type your own."; color: Pal.text-dim; font-size: Fs.small; wrap: word-wrap; }
+                    }
+                }
+                Rectangle { vertical-stretch: 1; }
+                if root.game-running : Text { text: "The game is running. Close it to change these."; color: Pal.warn; font-size: Fs.body; }
+                ApplyBar {
+                    message: root.game-problem != "" ? root.game-problem : (root.game-status != "" ? root.game-status : (root.game-dirty ? "Unsaved changes." : "All saved."));
+                    dirty: root.game-dirty || root.game-problem != "";
+                    blocked: root.game-running;
+                    can-apply: root.game-problem == "";
+                    reset => { root.reset-game(); }
+                    apply => { root.apply-game(); }
+                }
+            }
+
+            // ---- Settings page: each category is a block of toggles laid out in as many columns as fit ----
+            if root.tab == 2 : VerticalLayout {
+                padding: 24px; padding-top: 18px; padding-bottom: 18px;
+                spacing: 10px;
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    Text { text: "Presets"; color: Pal.text-dim; font-size: Fs.body; vertical-alignment: center; }
+                    for name[i] in root.preset-names : PresetPill { label: name; clicked => { root.load-preset(i); } }
+                }
+
+                list-area := Rectangle {
+                    vertical-stretch: 1;
+                    clip: true;
+                    property <int> cols: max(1, min(4, floor((self.width - 16px) / 300px)));
+                    property <length> colw: (self.width - 16px) / self.cols;
+                    flick := Flickable {
+                        content-width: parent.width;
+                        content-height: list.preferred-height;
+                        list := VerticalLayout {
+                            spacing: 2px;
+                            padding-right: 16px;
+                            for g in root.setting-groups : VerticalLayout {
+                                HorizontalLayout {
+                                    height: 46px;
+                                    spacing: 14px;
+                                    alignment: start;
+                                    Section { text: g.title; vertical-alignment: bottom; }
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        Text { y: parent.height - self.height - 5px; width: parent.width; text: g.note; color: Pal.text-dim; font-size: Fs.body; overflow: elide; }
+                                    }
+                                }
+                                Rectangle {
+                                    height: ceil(g.rows.length / list-area.cols) * 60px + 8px;
+                                    for r[j] in g.rows : Check {
+                                        x: mod(j, list-area.cols) * list-area.colw;
+                                        y: floor(j / list-area.cols) * 60px;
+                                        width: list-area.colw - 8px;
+                                        height: 56px;
+                                        label: r.label; hint: r.hint; checked: r.checked;
+                                        toggled => { root.toggle-setting(r.index); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if flick.content-height > flick.height : Rectangle {
+                        x: parent.width - 6px;
+                        width: 4px;
+                        border-radius: 2px;
+                        background: #ffffff55;
+                        height: max(36px, flick.height * flick.height / flick.content-height);
+                        y: -flick.content-y / (flick.content-height - flick.height) * (flick.height - self.height);
                     }
                 }
 
-                // ---- Play page ----
-                if root.tab == 0 : Rectangle {
-                  vertical-stretch: 1;
-                  HorizontalLayout {
-                    x: 0px; y: 0px; width: parent.width; height: parent.height;
-                    spacing: 30px;
-                    VerticalLayout {
-                    horizontal-stretch: 1;
-                    spacing: 14px;
-                    Rectangle { vertical-stretch: 1; }
-                    // The headline and its explanation only appear when something is wrong (no client folder).
-                    if !root.client-found : Text {
-                        text: root.headline;
-                        color: Pal.text;
-                        font-size: 30px;
-                        font-family: Pal.font-head;
-                        font-weight: 800;
-                        wrap: word-wrap;
-                        horizontal-alignment: center;
-                    }
-                    if !root.client-found : Text { text: root.subline; color: Pal.text-dim; font-size: 14px; wrap: word-wrap; horizontal-alignment: center; }
-                    Rectangle { height: 6px; }
+                if root.game-running : Text { text: "The game is running. Close it to change settings."; color: Pal.warn; font-size: Fs.body; }
 
-                    // asking for confirmation before anything is installed
-                    if root.update-state == 3 : Rectangle {
-                        height: 200px;
-                        border-radius: 16px;
-                        background: #ffffff16;
-                        border-width: 1px;
-                        border-color: Pal.line;
-                        VerticalLayout {
-                            padding: 18px;
-                            spacing: 8px;
-                            Text { text: root.update-title; color: Pal.gold; font-family: Pal.font-head; font-size: 18px; font-weight: 800; }
-                            Text { text: root.update-notes; color: Pal.text; font-size: 13px; wrap: word-wrap; vertical-stretch: 1; overflow: elide; }
-                            HorizontalLayout {
-                                spacing: 10px;
-                                alignment: start;
-                                GlassButton { width: 180px; height: 42px; text-size: 19px; label: "UPDATE NOW"; clicked => { root.start-update(); } }
-                                GlassButton { width: 120px; height: 40px; primary: false; label: "Not now"; clicked => { root.cancel-ask(); } }
-                            }
-                        }
-                    }
+                ApplyBar {
+                    message: root.status != "" ? root.status : (root.dirty ? "Unsaved changes." : "All settings saved.");
+                    dirty: root.dirty;
+                    blocked: root.game-running;
+                    reset => { root.reload-settings(); }
+                    apply => { root.apply-settings(); }
+                }
+            }
 
-                    // progress while downloading and installing
-                    if root.update-state == 4 : VerticalLayout {
-                        spacing: 8px;
-                        Rectangle {
-                            height: 10px;
-                            border-radius: 5px;
-                            background: #ffffff22;
-                            clip: true;
-                            Rectangle {
-                                x: 0; width: parent.width * max(0.04, min(1.0, root.update-progress)); height: parent.height;
-                                border-radius: 5px;
-                                background: @linear-gradient(90deg, Pal.portal-lo 0%, Pal.portal-hi 100%);
-                                animate width { duration: 160ms; }
-                            }
-                        }
-                        Text { text: root.update-text; color: Pal.text-dim; font-size: 13px; overflow: elide; }
-                    }
-
-                    if root.client-found && root.update-state != 3 && root.update-state != 4 : Text {
-                        text: (root.update-state == 2 || (root.update-state == 5 && root.update-retry)) ? "AN UPDATE AWAITS" : "THE PORTAL IS OPEN";
-                        color: Pal.gold;
-                        font-family: Pal.font-head;
-                        font-size: 15px;
-                        letter-spacing: 5px;
-                        horizontal-alignment: center;
-                    }
-                    if root.client-found && root.update-state != 3 && root.update-state != 4 : Ornament { }
-                    if root.update-state != 3 && root.update-state != 4 : HorizontalLayout {
-                        alignment: center;
-                        spacing: 14px;
-                        GlassButton {
-                            width: 270px;
-                            height: 68px;
-                            text-size: root.update-state == 2 ? 38px : (root.update-state == 5 && root.update-retry ? 29px : 44px);
-                            label: root.update-state == 2 ? "UPDATE" : (root.update-state == 5 && root.update-retry ? "TRY AGAIN" : "PLAY");
-                            enabled: root.client-found && !root.game-running;
-                            clicked => { if (root.update-state == 2 || (root.update-state == 5 && root.update-retry)) { root.ask-update(); } else { root.play(); } }
-                        }
-                        if root.update-state == 2 || (root.update-state == 5 && root.update-retry) : GlassButton {
-                            width: 150px;
-                            primary: false;
-                            label: "Play anyway";
-                            enabled: root.client-found && !root.game-running;
-                            clicked => { root.play(); }
-                        }
-                    }
-
-                    if root.game-running || root.update-state == 5 : Text {
-                        text: root.game-running ? "The game is running." : root.update-text;
-                        color: Pal.warn;
-                        font-size: 13px;
-                        wrap: word-wrap;
-                        horizontal-alignment: center;
-                    }
-                    if root.client-found && root.update-state != 3 && root.update-state != 4 : Ornament { }
-                    if root.client-found && root.update-state != 3 && root.update-state != 4 : Text {
-                        text: (root.update-state == 2 || (root.update-state == 5 && root.update-retry)) ? "Update first, or play anyway." : "Step through when you are ready.";
-                        color: Pal.text-dim;
-                        font-size: 13px;
-                        font-italic: true;
-                        horizontal-alignment: center;
-                    }
-                    Rectangle { vertical-stretch: 1; }
-
-                    // The sentinel from the taskbar icon, with something to say. Click it for another line.
-                    if root.update-state != 3 && root.update-state != 4 && root.quip != "" : HorizontalLayout {
-                        height: 92px;
-                        alignment: start;
-                        spacing: 0px;
-                        Rectangle {
-                            width: 92px;
-                            Image {
-                                source: @image-url("../assets/taskbar.png");
-                                width: 80px; height: 80px;
-                                x: 6px;
-                                y: 6px + 2px * sin(360deg * animation-tick() / 3.2s) - (sentinel-ta.has-hover ? 3px : 0px);
-                                image-fit: contain;
-                                animate y { duration: 140ms; }
-                            }
-                            sentinel-ta := TouchArea { mouse-cursor: pointer; clicked => { root.new-quip(); } }
-                        }
-                        Path {
-                            width: 12px; height: 92px;
-                            viewbox-width: 12; viewbox-height: 92;
-                            commands: "M 12 38 L 0 46 L 12 54 Z";
-                            fill: Pal.bubble;
-                        }
-                        Rectangle {
-                            width: 340px;
-                            border-radius: 14px;
-                            background: Pal.bubble;
+            // ---- Diagnostics page: the checks as cards in columns ----
+            if root.tab == 3 : VerticalLayout {
+                padding: 24px; padding-top: 20px; padding-bottom: 18px;
+                spacing: 10px;
+                diag-area := Rectangle {
+                    vertical-stretch: 3;
+                    clip: true;
+                    property <int> cols: max(1, min(3, floor((self.width - 16px) / 400px)));
+                    property <length> colw: (self.width - 16px) / self.cols;
+                    diag-flick := Flickable {
+                        content-width: parent.width;
+                        content-height: ceil(root.checks.length / diag-area.cols) * 94px;
+                        for c[i] in root.checks : Rectangle {
+                            x: mod(i, diag-area.cols) * diag-area.colw;
+                            y: floor(i / diag-area.cols) * 94px;
+                            width: diag-area.colw - 12px;
+                            height: 84px;
+                            border-radius: Rad.md;
+                            background: #ffffff10;
                             border-width: 1px;
-                            border-color: Pal.rim;
-                            Text {
-                                x: 16px; y: 0px;
-                                width: parent.width - 32px; height: parent.height;
-                                text: root.quip;
-                                color: Pal.text;
-                                font-size: 14px;
-                                font-italic: true;
-                                wrap: word-wrap;
-                                vertical-alignment: center;
+                            border-color: c.level == 0 ? #5ad18a30 : (c.level == 1 ? #ffd98a50 : #ff6b6b60);
+                            HorizontalLayout {
+                                padding-left: 16px; padding-right: 14px; padding-top: 14px; padding-bottom: 10px; spacing: 12px;
+                                StatusDot { level: c.level; y: 3px; }
+                                VerticalLayout {
+                                    horizontal-stretch: 1;
+                                    spacing: 3px;
+                                    Text { text: c.name; color: Pal.text; font-size: Fs.base; font-weight: 700; overflow: elide; }
+                                    Text { text: c.detail; color: Pal.text-dim; font-size: Fs.small; wrap: word-wrap; overflow: elide; vertical-stretch: 1; }
+                                }
                             }
                         }
                     }
-                    Rectangle { height: 4px; }
-
-                    // Status line at the very bottom: the version situation, and a way to check again.
-                    HorizontalLayout {
-                        alignment: start;
-                        spacing: 14px;
-                        if root.update-state != 3 && root.update-state != 4 && root.update-state != 5 && root.update-text != "" : Text {
-                            text: root.update-text;
-                            color: Pal.text-dim;
-                            font-size: 13px;
-                            vertical-alignment: center;
-                        }
-                        if root.update-state == 5 || root.update-state == 0 : Text {
-                            text: "Check for updates";
-                            color: chk-ta.has-hover ? Pal.gold-hi : Pal.text-dim;
-                            font-size: 12px;
-                            font-weight: 600;
-                            vertical-alignment: center;
-                            chk-ta := TouchArea { clicked => { root.check-update(); } }
-                        }
+                    if root.diag-busy : Text { text: "Checking..."; color: Pal.text-dim; font-size: Fs.base; }
+                    if diag-flick.content-height > diag-flick.height : Rectangle {
+                        x: parent.width - 6px;
+                        width: 4px;
+                        border-radius: 2px;
+                        background: #ffffff55;
+                        height: max(36px, diag-flick.height * diag-flick.height / diag-flick.content-height);
+                        y: -diag-flick.content-y / (diag-flick.content-height - diag-flick.height) * (diag-flick.height - self.height);
                     }
+                }
+                // the report that Copy and Save produce (no account data), so it can be read before it is sent
+                Rectangle {
+                    vertical-stretch: 2;
+                    min-height: 110px;
+                    border-radius: Rad.md;
+                    background: #00000050;
+                    border-width: 1px;
+                    border-color: Pal.line;
+                    clip: true;
+                    rep-flick := Flickable {
+                        x: 14px; y: 10px; width: parent.width - 28px; height: parent.height - 20px;
+                        content-width: self.width - 12px;
+                        content-height: rep-text.preferred-height;
+                        rep-text := Text { width: parent.width - 12px; text: root.report-text; color: Pal.text-dim; font-size: Fs.small; wrap: word-wrap; font-family: "monospace"; }
                     }
+                    if rep-flick.content-height > rep-flick.height : Rectangle {
+                        x: parent.width - 8px; y: 10px;
+                        width: 4px;
+                        border-radius: 2px;
+                        background: #ffffff55;
+                        height: max(30px, rep-flick.height * rep-flick.height / rep-flick.content-height);
+                    }
+                }
+                HorizontalLayout {
+                    spacing: Sp.md;
+                    alignment: end;
+                    Text { text: root.diag-status; color: Pal.text-dim; font-size: Fs.body; vertical-alignment: center; overflow: elide; horizontal-stretch: 1; }
+                    GlassButton { width: 150px; height: 44px; primary: false; label: "Check again"; enabled: !root.diag-busy; clicked => { root.run-diagnostics(); } }
+                    GlassButton { width: 150px; height: 44px; primary: false; label: "Save report"; enabled: !root.diag-busy; clicked => { root.save-report(); } }
+                    GlassButton { width: 190px; height: 44px; text-size: 17px; label: "COPY REPORT"; enabled: !root.diag-busy; clicked => { root.copy-report(); } }
+                }
+            }
+        }
 
-                    // ---- changelog (right) ----
-                    Rectangle {
-                        width: 400px;
-                        border-radius: 16px;
-                        background: #00000030;
+        // ---- navigation: centred above the picture, the same place on every page (it keeps clear of the logo) ----
+        nav := Rectangle {
+            x: max(160px, shell.pad-l + (shell.hero-w - self.width) / 2); y: 104px;
+            width: nav-row.preferred-width + 8px; height: 44px;
+            border-radius: 13px;
+            background: #07030fb0;
+            border-width: 1px;
+            border-color: Pal.rim;
+            nav-row := HorizontalLayout {
+                padding: 4px; spacing: 4px;
+                TabButton { label: "Play"; icon: @image-url("../assets/icons/play.png"); active: root.tab == 0; clicked => { root.tab = 0; } }
+                TabButton { label: "Game"; icon: @image-url("../assets/icons/game.png"); active: root.tab == 1; clicked => { root.tab = 1; } }
+                TabButton { label: "Settings"; icon: @image-url("../assets/icons/settings.png"); active: root.tab == 2; clicked => { root.tab = 2; } }
+                TabButton { label: "Diagnostics"; icon: @image-url("../assets/icons/diagnostics.png"); active: root.tab == 3; clicked => { root.tab = 3; } }
+            }
+        }
+
+        // ---- update status: a small chip at the top of the right-hand column ----
+        status-chip := Rectangle {
+            property <length> chip-w: min(shell.card-w, max(190px, shell.width - 12px - (nav.x + nav.width) - 16px));
+            x: shell.width - 12px - self.chip-w; y: 108px;
+            width: self.chip-w; height: 38px;
+            border-radius: 12px;
+            background: Pal.card;
+            border-width: 1px;
+            border-color: Pal.rim;
+            property <bool> bad: root.update-state == 5 || root.update-offline;
+            HorizontalLayout {
+                padding-left: 12px; padding-right: 5px; spacing: 9px;
+                // state mark
+                Rectangle {
+                    width: 18px;
+                    if root.update-state == 1 : BusyDots { x: -2px; y: (parent.height - 8px) / 2; width: 22px; }
+                    if root.update-state != 1 : Rectangle {
+                        width: 16px; height: 16px; y: (parent.height - 16px) / 2; border-radius: 8px;
+                        background: status-chip.bad ? #ffd98a30 : (root.update-state == 0 ? #5ad18a30 : #e6c27a30);
                         border-width: 1px;
-                        border-color: Pal.line;
-                        clip: true;
-                        VerticalLayout {
-                            padding: 16px;
-                            spacing: 8px;
-                            Section { text: "WHAT'S NEW"; height: 30px; font-size: 19px; letter-spacing: 2px; }
-                            if root.changelog-status != "" : Text {
-                                text: root.changelog-status;
-                                color: Pal.text-dim;
-                                font-size: 13px;
-                                wrap: word-wrap;
-                            }
-                            log-area := Rectangle {
-                                vertical-stretch: 1;
-                                clip: true;
-                                log-flick := Flickable {
-                                    content-width: parent.width;
-                                    content-height: log-list.preferred-height;
-                                    log-list := VerticalLayout {
-                                        spacing: 5px;
-                                        padding-right: 12px;
-                                        for row in root.changelog : VerticalLayout {
-                                            spacing: 1px;
-                                            if row.kind == 0 : VerticalLayout {
-                                                padding-top: 10px;
-                                                spacing: 1px;
-                                                Text { text: row.text; color: Pal.gold; font-family: Pal.font-head; font-size: 18px; font-weight: 800; }
-                                                Text { text: row.sub; color: Pal.text-dim; font-size: 11px; wrap: word-wrap; }
-                                            }
-                                            if row.kind == 1 : Text { text: row.text; color: Pal.text; font-size: 13px; font-weight: 700; wrap: word-wrap; }
-                                            if row.kind == 2 : Text { text: row.text; color: Pal.text-dim; font-size: 12px; wrap: word-wrap; }
-                                            if row.kind == 3 : HorizontalLayout {
-                                                spacing: 6px;
-                                                padding-left: 8px;
-                                                Text { text: "•"; color: Pal.gold; font-size: 12px; vertical-alignment: top; }
-                                                Text { text: row.text; color: Pal.text-dim; font-size: 12px; wrap: word-wrap; horizontal-stretch: 1; }
-                                            }
-                                        }
-                                    }
-                                }
-                                if log-flick.content-height > log-flick.height : Rectangle {
-                                    x: parent.width - 5px;
-                                    width: 4px;
-                                    border-radius: 2px;
-                                    background: #ffffff55;
-                                    height: max(36px, log-flick.height * log-flick.height / log-flick.content-height);
-                                    y: -log-flick.content-y / (log-flick.content-height - log-flick.height) * (log-flick.height - self.height);
-                                }
-                            }
+                        border-color: status-chip.bad ? Pal.warn : (root.update-state == 0 ? #5ad18a : Pal.gold);
+                        Image {
+                            source: @image-url("../assets/icons/check.png");
+                            visible: root.update-state == 0 && !root.update-offline;
+                            x: 3px; y: 3px; width: 10px; height: 10px; colorize: #5ad18a;
                         }
+                        Text { visible: root.update-state != 0 || root.update-offline; text: status-chip.bad ? "!" : "↑"; color: status-chip.bad ? Pal.warn : Pal.gold; font-size: 11px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
                     }
                 }
+                Text {
+                    text: root.update-text != "" ? root.update-text : (root.installed-tag != "" ? "Installed " + root.installed-tag : "");
+                    color: Pal.text;
+                    font-size: Fs.body;
+                    vertical-alignment: center;
+                    overflow: elide;
+                    horizontal-stretch: 1;
                 }
+                if root.update-state == 0 || root.update-state == 5 : Rectangle {
+                    width: 30px;
+                    check-btn := Rectangle {
+                        x: 0px; y: 4px; width: 30px; height: 30px; border-radius: 15px;
+                        background: chk-ta.has-hover ? #ffffff1c : transparent;
+                        animate background { duration: Mo.fast; }
+                        property <bool> kbd: false;
+                        accessible-role: button;
+                        accessible-label: "Check for updates";
+                        accessible-action-default => { root.check-update(); }
+                        Image { source: @image-url("../assets/icons/refresh.png"); x: 8px; y: 8px; width: 14px; height: 14px; colorize: chk-ta.has-hover || check-btn.kbd ? Pal.gold-hi : Pal.gold; }
+                        chk-ta := TouchArea { mouse-cursor: pointer; clicked => { root.check-update(); } }
+                        FocusScope {
+                            width: parent.width; height: parent.height;
+                            focus-on-click: false;
+                            focus-gained(reason) => { check-btn.kbd = reason == FocusReason.tab-navigation; }
+                            focus-lost(reason) => { check-btn.kbd = false; }
+                            key-pressed(e) => {
+                                if (e.text == " " || e.text == Key.Return) { root.check-update(); return accept; }
+                                return reject;
+                            }
+                        }
+                        FocusRing { width: parent.width; height: parent.height; shown: check-btn.kbd; radius: 15px; }
+                        Tip { width: parent.width; height: parent.height; text: "Check for updates"; shown: chk-ta.has-hover || check-btn.kbd; right-aligned: true; }
+                    }
+                }
+            }
+        }
 
-                // ---- Game page ----
-                if root.tab == 1 : VerticalLayout {
-                    spacing: 12px;
+        // ---- header (drag area, title, window buttons); drawn last so its tooltips sit on top ----
+        Rectangle {
+            x: 0; y: 0; width: parent.width; height: 84px;
+            TouchArea { pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.drag-window(self.mouse-x / 1px, self.mouse-y / 1px); } } }
+            // The name, centred on the window.
+            VerticalLayout {
+                x: 0px; y: 8px; width: parent.width; height: 56px;
+                alignment: center;
+                spacing: 2px;
+                Text { text: "REALMGATE"; color: Pal.text; font-family: Pal.font-title; font-size: 30px; font-weight: 800; letter-spacing: 3px; horizontal-alignment: center; stroke: #12072b; stroke-width: 3px; stroke-style: outside; }
+                Text { text: "A Linux client reforged for modern systems."; color: Pal.text-dim; font-size: Fs.small; font-weight: 600; horizontal-alignment: center; }
+                Rectangle {
+                    height: 14px;
                     HorizontalLayout {
-                        spacing: 34px;
-                        VerticalLayout {
-                            horizontal-stretch: 1;
-                            spacing: 8px;
-                            alignment: start;
-                            Section { text: "SERVER"; height: 24px; vertical-alignment: bottom; }
-                            Text { text: "Realm address"; color: Pal.text; font-size: 14px; font-weight: 600; }
-                            Field {
-                                text <=> root.game-realm;
-                                placeholder: "for example 192.168.1.5 or play.example.org";
-                                invalid: root.game-realm-bad;
-                                edited(t) => { root.game-realm-edited(t); }
-                            }
-                            Text { text: "Written to realmlist.wtf and Config.wtf together."; color: Pal.text-dim; font-size: 11px; }
-                            Rectangle { height: 8px; }
-                            Section { text: "ANTI-ALIASING"; height: 24px; vertical-alignment: bottom; }
-                            HorizontalLayout {
-                                spacing: 8px;
-                                alignment: start;
-                                for n in root.msaa-choices : PresetPill {
-                                    label: n == 1 ? "Off" : n + "x";
-                                    active: root.game-msaa == n;
-                                    clicked => { root.game-set-msaa(n); }
-                                }
-                            }
+                        alignment: center;
+                        Text {
+                            text: "BY @GHOSTSUPTHERE";
+                            color: credit-ta.has-hover ? Pal.gold-hi : Pal.gold;
+                            font-size: 10px; font-weight: 700; letter-spacing: 4px;
+                            vertical-alignment: center;
+                            credit-ta := TouchArea { mouse-cursor: pointer; clicked => { root.open-link("https://github.com/Ghostsupthere"); } }
                         }
-                        VerticalLayout {
-                            horizontal-stretch: 1;
-                            spacing: 4px;
-                            alignment: start;
-                            Section { text: "DISPLAY"; height: 24px; vertical-alignment: bottom; }
-                            Check { label: "Windowed"; hint: "Off runs the game fullscreen"; checked: root.game-windowed; toggled => { root.game-toggle-windowed(); } }
-                            Check { label: "Vertical sync"; hint: "Stops tearing; may add input lag"; checked: root.game-vsync; toggled => { root.game-toggle-vsync(); } }
-                            Rectangle { height: 6px; }
-                            Text { text: "Resolution"; color: Pal.text; font-size: 14px; font-weight: 600; x: 12px; }
-                            Field {
-                                text <=> root.game-resolution;
-                                placeholder: "width x height, like 1920x1080";
-                                invalid: root.game-resolution-bad;
-                                edited(t) => { root.game-resolution-edited(t); }
-                            }
-                            Rectangle { height: 2px; }
-                            HorizontalLayout {
-                                spacing: 6px;
-                                alignment: start;
-                                for r in root.resolution-presets : PresetPill {
-                                    label: r;
-                                    active: root.game-resolution == r;
-                                    clicked => { root.game-pick-resolution(r); }
-                                }
-                            }
-                        }
-                    }
-                    Rectangle { vertical-stretch: 1; }
-                    if root.game-running : Text { text: "The game is running. Close it to change these."; color: Pal.warn; font-size: 13px; }
-                    ApplyBar {
-                        message: root.game-problem != "" ? root.game-problem : (root.game-status != "" ? root.game-status : (root.game-dirty ? "Unsaved changes." : "All saved."));
-                        dirty: root.game-dirty || root.game-problem != "";
-                        blocked: root.game-running;
-                        can-apply: root.game-problem == "";
-                        reset => { root.reset-game(); }
-                        apply => { root.apply-game(); }
                     }
                 }
-
-                // ---- Settings page ----
-                if root.tab == 2 : VerticalLayout {
-                    spacing: 10px;
-
-                    HorizontalLayout {
-                        spacing: 8px;
-                        alignment: start;
-                        Text { text: "Presets"; color: Pal.text-dim; font-size: 13px; vertical-alignment: center; }
-                        for name[i] in root.preset-names : PresetPill { label: name; clicked => { root.load-preset(i); } }
-                    }
-
-                    // scrolling list with a thin scroll bar
-                    list-area := Rectangle {
-                        vertical-stretch: 1;
-                        clip: true;
-                        flick := Flickable {
-                            content-width: parent.width;
-                            content-height: list.preferred-height;
-                            list := VerticalLayout {
-                                spacing: 2px;
-                                padding-right: 14px;
-                                for row[i] in root.settings : VerticalLayout {
-                                    if row.header != "" : Section { text: row.header; height: 30px; vertical-alignment: bottom; }
-                                    Check { label: row.label; hint: row.hint; checked: row.checked; toggled => { root.toggle-setting(i); } }
-                                }
-                            }
-                        }
-                        if flick.content-height > flick.height : Rectangle {
-                            x: parent.width - 6px;
-                            width: 4px;
-                            border-radius: 2px;
-                            background: #ffffff55;
-                            height: max(36px, flick.height * flick.height / flick.content-height);
-                            y: -flick.content-y / (flick.content-height - flick.height) * (flick.height - self.height);
-                        }
-                    }
-
-                    if root.game-running : Text { text: "The game is running. Close it to change settings."; color: Pal.warn; font-size: 13px; }
-
-                    ApplyBar {
-                        message: root.status != "" ? root.status : (root.dirty ? "Unsaved changes." : "All settings saved.");
-                        dirty: root.dirty;
-                        blocked: root.game-running;
-                        reset => { root.reload-settings(); }
-                        apply => { root.apply-settings(); }
-                    }
-                }
-
-                // ---- Diagnostics page ----
-                if root.tab == 3 : VerticalLayout {
-                    spacing: 10px;
+            }
+            HorizontalLayout {
+                padding-left: 34px; padding-right: 6px; padding-top: 10px; padding-bottom: 12px;
+                spacing: 14px;
+                // Room for the logo, which is drawn larger than the layout row (see the Image after the shell).
+                Rectangle { width: 102px; }
+                Rectangle { horizontal-stretch: 1; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: end;
+                    // Day / night switch: the highlighted disc slides under the sun or the moon.
                     Rectangle {
-                        vertical-stretch: 1;
-                        clip: true;
-                        diag-flick := Flickable {
-                            content-width: parent.width;
-                            content-height: diag-list.preferred-height;
-                            diag-list := VerticalLayout {
-                                spacing: 6px;
-                                padding-right: 14px;
-                                if root.diag-busy : Text { text: "Checking..."; color: Pal.text-dim; font-size: 14px; }
-                                for c in root.checks : Rectangle {
-                                    height: 48px;
-                                    border-radius: 12px;
-                                    background: #ffffff10;
-                                    HorizontalLayout {
-                                        padding-left: 14px; padding-right: 14px; spacing: 12px;
-                                        StatusDot { level: c.level; y: (parent.height - self.height) / 2; }
-                                        VerticalLayout {
-                                            alignment: center;
-                                            horizontal-stretch: 1;
-                                            Text { text: c.name; color: Pal.text; font-size: 13px; font-weight: 700; }
-                                            Text { text: c.detail; color: Pal.text-dim; font-size: 12px; overflow: elide; }
-                                        }
-                                    }
-                                }
+                        width: 66px; height: 32px; border-radius: 16px;
+                        background: Pal.chrome;
+                        border-width: 1px;
+                        border-color: theme-ta.has-hover || theme-kbd ? Pal.portal-lo : #ffffff26;
+                        animate border-color { duration: Mo.fast; }
+                        property <bool> theme-kbd: false;
+                        accessible-role: button;
+                        accessible-label: Pal.night ? "Switch to day" : "Switch to night";
+                        accessible-action-default => { root.toggle-theme(); }
+                        Rectangle {
+                            y: 3px; width: 26px; height: 26px; border-radius: 13px;
+                            x: Pal.night ? 37px : 3px;
+                            background: Pal.night ? #7d9bff55 : #ffb34770;
+                            animate x { duration: Mo.base; easing: ease-in-out; }
+                        }
+                        Image { source: @image-url("../assets/sun.png"); x: 6px; y: 6px; width: 20px; height: 20px; opacity: Pal.night ? 0.5 : 1.0; animate opacity { duration: Mo.base; } }
+                        Image { source: @image-url("../assets/moon.png"); x: 40px; y: 6px; width: 20px; height: 20px; opacity: Pal.night ? 1.0 : 0.5; animate opacity { duration: Mo.base; } }
+                        theme-ta := TouchArea { mouse-cursor: pointer; clicked => { root.toggle-theme(); } }
+                        FocusScope {
+                            width: parent.width; height: parent.height;
+                            focus-on-click: false;
+                            focus-gained(reason) => { parent.theme-kbd = reason == FocusReason.tab-navigation; }
+                            focus-lost(reason) => { parent.theme-kbd = false; }
+                            key-pressed(e) => {
+                                if (e.text == " " || e.text == Key.Return) { root.toggle-theme(); return accept; }
+                                return reject;
                             }
                         }
-                        if diag-flick.content-height > diag-flick.height : Rectangle {
-                            x: parent.width - 6px;
-                            width: 4px;
-                            border-radius: 2px;
-                            background: #ffffff55;
-                            height: max(36px, diag-flick.height * diag-flick.height / diag-flick.content-height);
-                            y: -diag-flick.content-y / (diag-flick.content-height - diag-flick.height) * (diag-flick.height - self.height);
+                        Tip { width: parent.width; height: parent.height; text: Pal.night ? "Switch to day" : "Switch to night"; shown: theme-ta.has-hover || parent.theme-kbd; }
+                    }
+                    wiki-btn := Rectangle {
+                        width: 82px; height: 32px; border-radius: 16px;
+                        background: wiki-ta.has-hover || wiki-kbd ? Pal.gold : Pal.chrome;
+                        animate background { duration: Mo.fast; }
+                        property <bool> wiki-kbd: false;
+                        accessible-role: button;
+                        accessible-label: "Open the wiki in your browser";
+                        accessible-action-default => { root.open-link("https://wiki.downloadautism.com/"); }
+                        HorizontalLayout {
+                            alignment: center; spacing: 6px;
+                            Text { text: "Wiki"; color: wiki-ta.has-hover || wiki-btn.wiki-kbd ? Pal.on-gold : Pal.text; font-size: Fs.body; font-weight: 700; vertical-alignment: center; }
+                            Rectangle { width: 11px; Image { source: @image-url("../assets/icons/external.png"); y: (parent.height - 11px) / 2; width: 11px; height: 11px; colorize: wiki-ta.has-hover || wiki-btn.wiki-kbd ? Pal.on-gold : Pal.text; } }
                         }
+                        wiki-ta := TouchArea { mouse-cursor: pointer; clicked => { root.open-link("https://wiki.downloadautism.com/"); } }
+                        FocusScope {
+                            width: parent.width; height: parent.height;
+                            focus-on-click: false;
+                            focus-gained(reason) => { parent.wiki-kbd = reason == FocusReason.tab-navigation; }
+                            focus-lost(reason) => { parent.wiki-kbd = false; }
+                            key-pressed(e) => {
+                                if (e.text == " " || e.text == Key.Return) { root.open-link("https://wiki.downloadautism.com/"); return accept; }
+                                return reject;
+                            }
+                        }
+                        Tip { width: parent.width; height: parent.height; text: "Open the wiki in your browser"; shown: wiki-ta.has-hover || parent.wiki-kbd; right-aligned: true; }
                     }
-                    HorizontalLayout {
-                        spacing: 12px;
-                        alignment: end;
-                        Text { text: root.diag-status; color: Pal.text-dim; font-size: 13px; vertical-alignment: center; overflow: elide; horizontal-stretch: 1; }
-                        GlassButton { width: 150px; height: 44px; primary: false; label: "Check again"; enabled: !root.diag-busy; clicked => { root.run-diagnostics(); } }
-                        GlassButton { width: 150px; height: 44px; primary: false; label: "Save report"; enabled: !root.diag-busy; clicked => { root.save-report(); } }
-                        GlassButton { width: 190px; height: 44px; text-size: 17px; label: "COPY REPORT"; enabled: !root.diag-busy; clicked => { root.copy-report(); } }
+                    HeaderButton { glyph: "–"; tip: "Minimize"; clicked => { root.minimize-requested(); } }
+                    HeaderButton {
+                        icon: root.maxed ? @image-url("../assets/icons/restore.png") : @image-url("../assets/icons/maximize.png");
+                        tip: root.maxed ? "Restore" : "Maximize";
+                        clicked => { root.maximized = !root.maximized; }
                     }
+                    HeaderButton { glyph: "✕"; tip: "Close"; hover-color: #e5484d; right-aligned: true; clicked => { root.close-requested(); } }
                 }
             }
         }
     }
 
-    // ---- aged stone frame: drawn over the edge of the content; its chips are transparent ----
-    Image {
-        source: Pal.night ? @image-url("../assets/frame-night.png") : @image-url("../assets/frame.png");
-        x: 0px; y: 0px; width: parent.width; height: parent.height;
-    }
+    // ---- black metal frame: a riveted band with a thin line of fel fire along its inner edge ----
+    if !root.maxed : MetalFrame { x: 0px; y: 0px; width: parent.width; height: parent.height; }
 
-    // ---- crest: overlaps the header and the panel edge; lit with a soft pulsing glow while a client is
-    // installed, grey and dark while none is found ----
-    if root.client-found : Rectangle {
-        x: -3px; y: -11px; width: 160px; height: 160px; border-radius: 80px;
-        background: @radial-gradient(circle, #86ff4a58 0%, #86ff4a33 50%, #86ff4a00 76%);
-        opacity: 0.8 + 0.2 * sin(360deg * animation-tick() / 4.5s);
-    }
+    // ---- crest: overlaps the header and the panel edge; grey and dark while no client is found ----
     Image {
         source: root.client-found ? @image-url("../assets/icon.png") : @image-url("../assets/icon-dim.png");
-        x: 17px; y: 11px; width: 118px; height: 118px;
+        x: 30px; y: 26px; width: 124px; height: 124px;
         image-fit: contain;
+    }
+
+    // ---- resize edges (a frameless window has none of its own) ----
+    if !root.maxed : Rectangle {
+        x: 12px; y: 0px; width: parent.width - 24px; height: 5px;
+        TouchArea { mouse-cursor: MouseCursor.n-resize; pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize-window(0, self.mouse-x / 1px + 12, self.mouse-y / 1px); } } }
+    }
+    if !root.maxed : Rectangle {
+        x: 12px; y: parent.height - 5px; width: parent.width - 24px; height: 5px;
+        TouchArea { mouse-cursor: MouseCursor.s-resize; pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize-window(1, self.mouse-x / 1px + 12, self.mouse-y / 1px + root.height / 1px - 5); } } }
+    }
+    if !root.maxed : Rectangle {
+        x: 0px; y: 12px; width: 5px; height: parent.height - 24px;
+        TouchArea { mouse-cursor: MouseCursor.w-resize; pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize-window(2, self.mouse-x / 1px, self.mouse-y / 1px + 12); } } }
+    }
+    if !root.maxed : Rectangle {
+        x: parent.width - 5px; y: 12px; width: 5px; height: parent.height - 24px;
+        TouchArea { mouse-cursor: MouseCursor.e-resize; pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize-window(3, self.mouse-x / 1px + root.width / 1px - 5, self.mouse-y / 1px + 12); } } }
+    }
+    if !root.maxed : Rectangle {
+        x: 0px; y: 0px; width: 12px; height: 12px;
+        TouchArea { mouse-cursor: MouseCursor.nw-resize; pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize-window(4, self.mouse-x / 1px, self.mouse-y / 1px); } } }
+    }
+    if !root.maxed : Rectangle {
+        x: parent.width - 12px; y: 0px; width: 12px; height: 12px;
+        TouchArea { mouse-cursor: MouseCursor.ne-resize; pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize-window(5, self.mouse-x / 1px + root.width / 1px - 12, self.mouse-y / 1px); } } }
+    }
+    if !root.maxed : Rectangle {
+        x: 0px; y: parent.height - 12px; width: 12px; height: 12px;
+        TouchArea { mouse-cursor: MouseCursor.sw-resize; pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize-window(6, self.mouse-x / 1px, self.mouse-y / 1px + root.height / 1px - 12); } } }
+    }
+    if !root.maxed : Rectangle {
+        x: parent.width - 12px; y: parent.height - 12px; width: 12px; height: 12px;
+        TouchArea { mouse-cursor: MouseCursor.se-resize; pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize-window(7, self.mouse-x / 1px + root.width / 1px - 12, self.mouse-y / 1px + root.height / 1px - 12); } } }
     }
 }

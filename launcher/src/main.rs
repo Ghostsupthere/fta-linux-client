@@ -19,7 +19,11 @@ mod updater;
 slint::include_modules!();
 
 /// The only places the launcher will ever open in a browser.
-const ALLOWED_LINKS: &[&str] = &["https://wiki.downloadautism.com/", "https://github.com/Ghostsupthere"];
+const ALLOWED_LINKS: &[&str] = &[
+    "https://wiki.downloadautism.com/",
+    "https://github.com/Ghostsupthere",
+    "https://github.com/Ghostsupthere/fta-linux-client/releases",
+];
 
 /// The launcher's own config folder (`~/.config/fta-linux-launcher`): the theme choice and an optional quips.txt.
 fn config_dir() -> Option<std::path::PathBuf> {
@@ -67,6 +71,65 @@ fn initial_night() -> bool {
     matches!(hour, Some(h) if !(7..19).contains(&h))
 }
 
+/// An explicit motion choice: FTA_LAUNCHER_REDUCE_MOTION=1|0, else the first line of `~/.config/fta-linux-launcher/motion`
+/// (`reduce` or `full`). None when the person has not said.
+fn motion_choice() -> Option<bool> {
+    if let Ok(v) = std::env::var("FTA_LAUNCHER_REDUCE_MOTION") {
+        match v.trim() {
+            "1" | "true" | "yes" => return Some(true),
+            "0" | "false" | "no" => return Some(false),
+            _ => {}
+        }
+    }
+    let text = std::fs::read_to_string(config_dir()?.join("motion")).ok()?;
+    match text.lines().next()?.trim() {
+        "reduce" => Some(true),
+        "full" => Some(false),
+        _ => None,
+    }
+}
+
+/// Whether the desktop asks for fewer animations: GNOME and anything that answers the settings portal
+/// (`org.gnome.desktop.interface enable-animations`), or KDE (`AnimationDurationFactor=0` in kdeglobals).
+fn desktop_prefers_reduced_motion() -> bool {
+    if let Some(base) = std::env::var_os("XDG_CONFIG_HOME")
+        .filter(|v| !v.is_empty())
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".config")))
+    {
+        if let Ok(text) = std::fs::read_to_string(base.join("kdeglobals")) {
+            let mut in_kde = false;
+            for line in text.lines() {
+                let line = line.trim();
+                if line.starts_with('[') {
+                    in_kde = line == "[KDE]";
+                } else if in_kde {
+                    if let Some(v) = line.strip_prefix("AnimationDurationFactor=") {
+                        if v.trim().parse::<f64>().map(|f| f <= 0.0).unwrap_or(false) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let out = std::process::Command::new("gdbus")
+        .args([
+            "call", "--session", "--timeout", "2",
+            "--dest", "org.freedesktop.portal.Desktop",
+            "--object-path", "/org/freedesktop/portal/desktop",
+            "--method", "org.freedesktop.portal.Settings.Read",
+            "org.gnome.desktop.interface", "enable-animations",
+        ])
+        .stdin(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .output();
+    match out {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).contains("false"),
+        _ => false,
+    }
+}
+
 fn open_link(url: &str) {
     if !ALLOWED_LINKS.contains(&url) {
         eprintln!("launcher: refusing to open {url}");
@@ -76,22 +139,29 @@ fn open_link(url: &str) {
     let _ = std::process::Command::new("xdg-open").arg(url).spawn();
 }
 
-/// Rebuilds the Settings page rows from the model.
-fn rows(model: &settings::Settings) -> Vec<SettingRow> {
-    let mut last = "";
-    catalog::SETTINGS
-        .iter()
-        .enumerate()
-        .map(|(i, s)| {
-            let header = if s.category != last { s.category } else { "" };
-            last = s.category;
-            SettingRow {
-                key: s.key.into(),
-                label: s.label.into(),
-                hint: s.hint.into(),
-                header: header.into(),
-                checked: model.values[i],
-            }
+/// The Settings page groups: one block per category, each with its toggles (and their position in the full list).
+fn groups(model: &settings::Settings) -> Vec<SettingGroup> {
+    let mut out: Vec<(String, Vec<SettingRow>)> = Vec::new();
+    for (i, s) in catalog::SETTINGS.iter().enumerate() {
+        if out.last().map(|(title, _)| title.as_str()) != Some(s.category) {
+            out.push((s.category.to_string(), Vec::new()));
+        }
+        out.last_mut().unwrap().1.push(SettingRow {
+            key: s.key.into(),
+            label: s.label.into(),
+            hint: s.hint.into(),
+            checked: model.values[i],
+            index: i as i32,
+        });
+    }
+    out.into_iter()
+        .map(|(title, rows)| {
+            // "DEBUGGING (takes effect at ...)": the part in brackets becomes the small note beside the title
+            let (head, note) = match title.split_once('(') {
+                Some((h, n)) => (h.trim().to_string(), n.trim_end().trim_end_matches(')').to_string()),
+                None => (title.clone(), String::new()),
+            };
+            SettingGroup { title: head.into(), note: note.into(), rows: ModelRc::new(VecModel::from(rows)) }
         })
         .collect()
 }
@@ -117,26 +187,39 @@ fn show_game_text(ui: &MainWindow, g: &game::Game) {
     ui.set_game_resolution(g.values.resolution.clone().into());
 }
 
-/// The changelog as flat rows for the list: a heading per release, then its paragraphs and bullets.
-fn change_rows(notes: &[updater::Note]) -> Vec<ChangeRow> {
+/// The changelog as flat rows for the list: a heading per release (with its position, so the page can fold the
+/// others away), then its paragraphs and bullets.
+fn change_rows(notes: &[updater::Note], installed: Option<&str>) -> Vec<ChangeRow> {
     let mut rows = Vec::new();
-    let row = |kind: i32, text: &str, sub: &str| ChangeRow { kind, text: text.into(), sub: sub.into() };
-    for n in notes {
-        let sub = match (n.title.is_empty(), n.date.is_empty()) {
-            (false, false) => format!("{}  ·  {}", n.title, n.date),
-            (false, true) => n.title.clone(),
-            (true, _) => n.date.clone(),
-        };
-        rows.push(row(0, &n.tag, &sub));
+    let body = |release: i32, kind: i32, text: &str| ChangeRow {
+        kind,
+        text: text.into(),
+        title: "".into(),
+        date: "".into(),
+        release,
+        latest: false,
+        installed: false,
+    };
+    for (i, n) in notes.iter().enumerate() {
+        let i = i as i32;
+        rows.push(ChangeRow {
+            kind: 0,
+            text: n.tag.as_str().into(),
+            title: n.title.as_str().into(),
+            date: n.date.as_str().into(),
+            release: i,
+            latest: i == 0,
+            installed: installed == Some(n.tag.as_str()),
+        });
         for b in &n.blocks {
             if !b.lead.is_empty() {
-                rows.push(row(1, &b.lead, ""));
+                rows.push(body(i, 1, &b.lead));
             }
             if !b.text.is_empty() {
-                rows.push(row(2, &b.text, ""));
+                rows.push(body(i, 2, &b.text));
             }
             for bullet in &b.bullets {
-                rows.push(row(3, bullet, ""));
+                rows.push(body(i, 3, bullet));
             }
         }
     }
@@ -183,6 +266,7 @@ fn check_for_update(weak: slint::Weak<MainWindow>, client: Option<std::path::Pat
     let Some(client) = client else { return };
     if let Some(ui) = weak.upgrade() {
         ui.set_update_retry(false);
+        ui.set_update_offline(false);
         ui.set_update_state(1);
         ui.set_update_text("Checking for updates...".into());
         ui.set_changelog_status("Loading...".into());
@@ -195,7 +279,8 @@ fn check_for_update(weak: slint::Weak<MainWindow>, client: Option<std::path::Pat
             match result {
                 Ok(feed) => {
                     let rel = feed.latest;
-                    ui.set_changelog(ModelRc::new(VecModel::from(change_rows(&feed.notes))));
+                    ui.set_changelog(ModelRc::new(VecModel::from(change_rows(&feed.notes, installed.as_deref()))));
+                    ui.set_open_release(0);
                     ui.set_changelog_status("".into());
                     if updater::is_newer(&rel.tag, installed.as_deref()) {
                         let have = installed.as_deref().map(|t| format!("You have {t}.")).unwrap_or_else(|| "Your install does not record its version.".into());
@@ -211,6 +296,7 @@ fn check_for_update(weak: slint::Weak<MainWindow>, client: Option<std::path::Pat
                     eprintln!("launcher: update check failed: {err}");
                     ui.set_changelog_status("The changelog could not be loaded (no connection?).".into());
                     ui.set_update_text("Could not check for updates (no connection?). You can still play.".into());
+                    ui.set_update_offline(true);
                     ui.set_update_state(0);
                 }
             }
@@ -350,6 +436,7 @@ fn main() -> Result<(), slint::PlatformError> {
         Some(dir) => {
             ui.set_client_found(true);
             ui.set_headline("Ready to play".into());
+            ui.set_installed_tag(updater::installed_tag(dir).unwrap_or_default().into());
             let stamp = client::installed_stamp(dir).unwrap_or_else(|| "Installed".to_string());
             let line = match updater::installed_tag(dir) {
                 Some(tag) => format!("{tag}  ·  {stamp}"),
@@ -368,8 +455,8 @@ fn main() -> Result<(), slint::PlatformError> {
 
     // ---- Settings page ----
     let model = Rc::new(RefCell::new(client_dir.as_deref().map(settings::Settings::load)));
-    let rows_model: Rc<VecModel<SettingRow>> = Rc::new(VecModel::default());
-    ui.set_settings(ModelRc::from(rows_model.clone()));
+    let rows_model: Rc<VecModel<SettingGroup>> = Rc::new(VecModel::default());
+    ui.set_setting_groups(ModelRc::from(rows_model.clone()));
     ui.set_preset_names(ModelRc::new(VecModel::from(
         catalog::PRESETS.iter().map(|p| SharedString::from(p.name)).collect::<Vec<_>>(),
     )));
@@ -381,7 +468,7 @@ fn main() -> Result<(), slint::PlatformError> {
         Rc::new(move || {
             let Some(ui) = weak.upgrade() else { return };
             if let Some(m) = model.borrow().as_ref() {
-                rows_model.set_vec(rows(m));
+                rows_model.set_vec(groups(m));
                 ui.set_dirty(m.is_dirty());
             }
             ui.set_game_running(client::game_running());
@@ -663,8 +750,10 @@ fn main() -> Result<(), slint::PlatformError> {
     // ---- Play ----
     {
         let dir = client_dir.clone();
+        let weak = ui.as_weak();
         ui.on_play(move || {
             let Some(dir) = &dir else { return };
+            let Some(ui) = weak.upgrade() else { return };
             let script = dir.join("FTA-Linux/play.sh");
             // Start the game detached from the launcher, then close the launcher.
             let started = std::process::Command::new("setsid")
@@ -677,7 +766,14 @@ fn main() -> Result<(), slint::PlatformError> {
                 .spawn()
                 .is_ok();
             if started {
-                let _ = slint::quit_event_loop();
+                // Show the button's loading state for a moment so the click visibly did something.
+                ui.set_play_error("".into());
+                ui.set_launching(true);
+                slint::Timer::single_shot(std::time::Duration::from_millis(900), || {
+                    let _ = slint::quit_event_loop();
+                });
+            } else {
+                ui.set_play_error("The game could not be started. Run Diagnostics to see what is missing.".into());
             }
         });
     }
@@ -717,6 +813,61 @@ fn main() -> Result<(), slint::PlatformError> {
     });
 
     ui.on_open_link(|url| open_link(url.as_str()));
+
+    // Frameless window: the edges and corners start a resize themselves (0 N, 1 S, 2 W, 3 E, 4 NW, 5 NE, 6 SW, 7 SE).
+    let weak = ui.as_weak();
+    ui.on_resize_window(move |edge, x, y| {
+        use slint::winit_030::winit::window::ResizeDirection as D;
+        let Some(ui) = weak.upgrade() else { return };
+        let dir = match edge {
+            0 => D::North,
+            1 => D::South,
+            2 => D::West,
+            3 => D::East,
+            4 => D::NorthWest,
+            5 => D::NorthEast,
+            6 => D::SouthWest,
+            _ => D::SouthEast,
+        };
+        let started = ui.window().with_winit_window(|w| w.drag_resize_window(dir).is_ok()).unwrap_or(false);
+        if !started {
+            return;
+        }
+        // Same as the move: the compositor takes over and swallows the release.
+        let weak = weak.clone();
+        slint::Timer::single_shot(std::time::Duration::from_millis(30), move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.window().dispatch_event(slint::platform::WindowEvent::PointerReleased {
+                    position: slint::LogicalPosition::new(x, y),
+                    button: slint::platform::PointerEventButton::Left,
+                });
+            }
+        });
+    });
+
+    // Reduced motion: an explicit choice wins; otherwise the desktop is asked (in the background, it can be slow).
+    match motion_choice() {
+        Some(reduce) => ui.set_reduce_motion(reduce),
+        None => {
+            let weak = ui.as_weak();
+            std::thread::spawn(move || {
+                let reduce = desktop_prefers_reduced_motion();
+                if reduce {
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = weak.upgrade() {
+                            ui.set_reduce_motion(true);
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    // Development aid: a window size for screenshots, e.g. 1000x640.
+    #[cfg(feature = "dev")]
+    if let Some((w, h)) = std::env::var("FTA_LAUNCHER_SIZE").ok().and_then(|v| v.split_once('x').and_then(|(a, b)| Some((a.parse::<f32>().ok()?, b.parse::<f32>().ok()?)))) {
+        ui.window().set_size(slint::LogicalSize::new(w, h));
+    }
 
     // Development aid: start on a given tab (0 Play, 1 Game, 2 Settings, 3 Diagnostics), e.g. for screenshots.
     if let Some(tab) = std::env::var("FTA_LAUNCHER_TAB").ok().and_then(|v| v.parse::<i32>().ok()) {

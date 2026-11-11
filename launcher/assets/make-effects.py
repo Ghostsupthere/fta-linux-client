@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Builds the two small effect images the launcher draws on top of the artwork:
 
-  swirl.png     a green portal vortex (transparent outside a circle); the Play button turns it slowly
   icon-dim.png  the app icon in grey, shown while no client folder is found
   sun.png, moon.png  the two icons on the day / night switch in the header
 
@@ -73,8 +72,7 @@ def moon(n=64, k=4):
     return im.resize((n, n), Image.LANCZOS)
 
 
-swirl().save(HERE / "swirl.png", optimize=True)
 sun().save(HERE / "sun.png", optimize=True)
 moon().save(HERE / "moon.png", optimize=True)
 dim_icon().save(HERE / "icon-dim.png", optimize=True)
-print("wrote swirl.png, icon-dim.png, sun.png and moon.png")
+print("wrote icon-dim.png, sun.png and moon.png")
