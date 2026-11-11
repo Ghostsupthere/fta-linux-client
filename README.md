@@ -30,7 +30,7 @@ only opens it as text, right-click it, choose *Properties*, then *Permissions*, 
 or run `bash FTA-Linux-Installer.run` in a terminal.
 
 It opens a terminal, finds your From The Ashes client folder (or asks you to pick it), installs into it, offers
-to install any missing system libraries (it asks for your password), adds **From The Ashes (Linux)** to your
+to install any missing system libraries (it asks for your password), adds **Realmgate** to your
 applications menu (it opens the launcher) and offers to open the launcher. Run it again at any time to update.
 
 **Addon fixes.** The installer carries a few small fixes for addons in the base client (ElvUI chat, the ElvUI bag
@@ -41,24 +41,40 @@ fits (this needs the `patch` tool), and otherwise the file is left alone. Origin
 `.tar.gz`. These are Lua files shared with the Windows client in the same folder, so Windows gets the fixes too.
 Up to v0.2.6 they were a separate `FTA-Addon-Fixes.tar.gz` download; from v0.2.7 the single `.run` is all you need.
 
-### The launcher
+### The launcher (Realmgate)
 
-The launcher comes with the installer (there is no separate download). Open **From The Ashes (Linux)** from your
-applications menu, or run `FTA-Linux/launcher.sh` in your client folder.
+The launcher comes with the installer (there is no separate download). Open **Realmgate** from your applications
+menu, or run `FTA-Linux/launcher.sh` in your client folder. The window can be resized from its edges and maximized;
+**Tab** moves between the controls and **Space** or **Enter** presses one.
 
-- **Play**: starts the game. When a newer release is out it says *Update ready*; the Update button downloads the
-  installer from this project's release page, checks it, asks before installing, installs it and restarts. The
-  *What's new* panel shows the release notes.
+- **Play**: a framed scene of the Dark Portal with one big **Play** button. The portal swirls, the braziers throw
+  sparks and the sentinel at the bottom has a joke for you (click it for another one). The small status chip at the
+  top right says whether you are up to date. When a newer release is out it says *Update ready*; the Update button
+  downloads the installer from this project's release page, checks it, asks before installing, installs it and
+  restarts. **What's new** shows the release notes, the newest one open and older ones folded; *All releases* opens
+  the full list.
 - **Game**: realm address (written to `realmlist.wtf` and `Config.wtf`), windowed, vsync, resolution and
   anti-aliasing.
-- **Settings**: the WarcraftXL and performance options as checkboxes, with presets and a Safe mode, and a Debugging
-  section (Lua errors, logging switches). **Apply** saves them and keeps the previous files in
-  `FTA-Linux/settings-backup/`. Nothing is saved while the game is running.
-- **Diagnostics**: checks the system, graphics driver, game files and libraries, and copies or saves a report to
-  attach to a bug report (it holds no account data).
+- **Settings**: the WarcraftXL and performance options as checkboxes in columns by category, with presets and a
+  Safe mode, and a Debugging section (Lua errors, logging switches). **Apply** saves them and keeps the previous
+  files in `FTA-Linux/settings-backup/`. Nothing is saved while the game is running.
+- **Diagnostics**: checks the system, graphics driver, game files and libraries, shows the report and copies or saves
+  it to attach to a bug report (it holds no account data).
 
 `FTA-Linux/play.sh` still starts the game without the launcher (the menu entry's *Play directly* action does the
 same).
+
+**Day and night.** The scene follows your clock (night from 19:00 to 07:00). The sun/moon switch in the header picks
+one and remembers it in `~/.config/fta-linux-launcher/theme` (the word `day` or `night`; delete the file to follow the
+clock again).
+
+**Reduced motion.** The launcher stops all animation when your desktop asks for fewer animations (the GNOME setting,
+or KDE's animation speed set to instant). To choose it yourself, put `reduce` (or `full`) on the first line of
+`~/.config/fta-linux-launcher/motion`, or start the launcher with `FTA_LAUNCHER_REDUCE_MOTION=1`. The Game, Settings and
+Diagnostics pages never animate.
+
+**Your own jokes.** Put lines in `~/.config/fta-linux-launcher/quips.txt`, one per line (lines starting with `#` are
+ignored, at most 110 characters each). If its first line is `# replace`, only your lines are used.
 
 ### Manual install
 
@@ -122,7 +138,9 @@ start in containers without a GPU). The Fedora and openSUSE package names come f
 package lists and have not been run; if a name is wrong, install the library that `play.sh --check` reports.
 The maintainer's SDL3 is 3.4.x; 3.2.x loads but has not been played.
 The launcher has only been run on Arch/CachyOS under Wayland (KDE). It is untested on X11 and on other
-distributions; if it does not open, `FTA-Linux/play.sh` starts the game without it.
+distributions; if it does not open, `FTA-Linux/play.sh` starts the game without it. Its frame and rounded corners
+need a compositing window manager, and the animated scene costs a little CPU on the Play page (the other pages
+are idle; reduced motion turns the animation off).
 
 ## Settings
 
@@ -164,12 +182,18 @@ The launcher's Settings tab edits the same file for you.
 ## Uninstall
 
 Delete `Wow64` and the `FTA-Linux` folder from your client folder, and
-`~/.local/share/applications/fta-linux-client.desktop` if you added the menu shortcut. The offline shader packs
+`~/.local/share/applications/fta-linux-client.desktop` if you added the menu shortcut (and `~/.config/fta-linux-launcher/`
+if you want the launcher's saved choices gone). The offline shader packs
 in `Utils/WarcraftXL/visuals/` are harmless to keep.
 
 ## Releasing
 
-The binary parts are built in the [source tree](https://github.com/Ghostsupthere/fta-wd-ix-linux-native) and packaged here. Set `RELEASE_TAG` (for example `RELEASE_TAG=v0.2.10`) when packaging, so the launcher can tell which release is installed.
+The binary parts are built in the [source tree](https://github.com/Ghostsupthere/fta-wd-ix-linux-native) and packaged here. Set `RELEASE_TAG` (for example `RELEASE_TAG=v0.3.0`) when packaging, so the launcher can tell which release is installed.
+
+**Release notes** are shown in the launcher's *What's new* card, so write them for it: short paragraphs that each start
+with a bold lead-in (`**Shield shadows fixed.** One or two sentences.`), optional `-` bullets, and the install text in
+a paragraph starting `**Install`, after which the launcher stops reading. The release title is `vX.Y.Z: a few words`;
+the words after the colon become the subtitle. Keep each paragraph under about 230 characters.
 
 ## Layout
 
@@ -179,5 +203,6 @@ The binary parts are built in the [source tree](https://github.com/Ghostsupthere
 | `installer/installer-header.sh` | The one-click installer's script part (the payload is appended at build time) |
 | `tools/package.sh` | Builds the release files from a payload |
 | `tools/make-addon-fixes.sh` | Builds the addon-fixes folder (`fixes.manifest`, patches, fixed files) that `package.sh` bundles into the installer |
-| `launcher/` | The launcher (Rust and Slint): update check, Play, game and WarcraftXL settings, diagnostics |
+| `launcher/` | The launcher (Rust and Slint): update check, Play, game and WarcraftXL settings, diagnostics. `ui/main.slint` is the whole interface (design tokens at the top); `src/` the logic |
+| `launcher/assets/` | Fonts, artwork and the small scripts that build the pictures from it: `make-background.py` (scene and backdrops), `make-portal.py` (the animated portal), `make-frame.py` (the metal frame), `make-icons.py`, `make-effects.py` |
 | `tools/build-launcher.sh` | Builds the launcher against the game's glibc (needs Nix) |
