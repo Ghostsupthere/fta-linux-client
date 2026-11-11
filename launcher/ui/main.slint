@@ -101,6 +101,14 @@ export struct CheckRow {
     detail: string,
 }
 
+// One screen on the Login tab.
+export struct LoginRow {
+    id: string,
+    title: string,
+    available: bool,
+    active: bool,
+}
+
 export struct ChangeRow {
     // 0 release heading, 1 lead-in, 2 paragraph, 3 bullet
     kind: int,
@@ -689,6 +697,80 @@ component ReleaseHeader inherits Rectangle {
     FocusRing { width: parent.width; height: parent.height; shown: root.kbd; radius: Rad.sm; }
 }
 
+// One choice on the Login tab: a picture of the screen, its name, and whether it is in use or not installed.
+component LoginTile inherits Rectangle {
+    in property <string> title;
+    in property <image> thumb;
+    in property <bool> is-default: false;
+    in property <bool> available: true;
+    in property <bool> active: false;
+    callback clicked;
+    property <bool> kbd: false;
+    border-radius: Rad.lg;
+    background: #00000050;
+    border-width: root.active ? 2px : 1px;
+    border-color: root.active ? Pal.portal : (ta.has-hover && root.available ? Pal.portal-lo : Pal.line);
+    animate border-color { duration: Mo.fast; }
+    accessible-role: button;
+    accessible-label: root.title + (root.active ? ", in use" : (root.available ? "" : ", not installed"));
+    accessible-action-default => { if root.available { root.clicked(); } }
+    VerticalLayout {
+        padding: 6px; spacing: 6px;
+        Rectangle {
+            vertical-stretch: 1;
+            border-radius: Rad.md;
+            clip: true;
+            background: #150d2a;
+            if root.is-default : Text {
+                text: "The game's own\nlogin screen";
+                color: Pal.text-dim; font-size: Fs.body; font-family: Pal.font-head; font-weight: 700;
+                horizontal-alignment: center; vertical-alignment: center;
+                width: parent.width; height: parent.height;
+            }
+            if !root.is-default : Image {
+                source: root.thumb;
+                image-fit: cover;
+                width: parent.width; height: parent.height;
+                opacity: root.available ? 1.0 : 0.3;
+            }
+            if root.active : Rectangle {
+                x: 8px; y: 8px;
+                height: 22px; width: badge.preferred-width + 18px;
+                border-radius: 11px;
+                background: Pal.portal;
+                badge := Text { text: "IN USE"; color: Pal.on-portal; font-size: Fs.caption; font-weight: 800; letter-spacing: 1px; horizontal-alignment: center; vertical-alignment: center; }
+            }
+            if !root.available : Text {
+                text: "Not installed";
+                color: Pal.text; font-size: Fs.body; font-weight: 700;
+                horizontal-alignment: center; vertical-alignment: center;
+                width: parent.width; height: parent.height;
+            }
+        }
+        Text {
+            text: root.title;
+            height: 30px;
+            color: root.available ? Pal.text : Pal.text-dim;
+            font-size: Fs.body; font-family: Pal.font-head; font-weight: 700;
+            horizontal-alignment: center; vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+    ta := TouchArea { enabled: root.available; mouse-cursor: root.available ? MouseCursor.pointer : MouseCursor.default; clicked => { root.clicked(); } }
+    fs := FocusScope {
+        width: parent.width; height: parent.height;
+        enabled: root.available;
+        focus-on-click: false;
+        focus-gained(reason) => { root.kbd = reason == FocusReason.tab-navigation; }
+        focus-lost(reason) => { root.kbd = false; }
+        key-pressed(e) => {
+            if (e.text == " " || e.text == Key.Return) { root.clicked(); return accept; }
+            return reject;
+        }
+    }
+    FocusRing { width: parent.width; height: parent.height; shown: root.kbd; radius: Rad.lg; }
+}
+
 // A titled block for the Game page: a heading, then whatever is put inside.
 component Card inherits Rectangle {
     in property <string> title;
@@ -778,6 +860,22 @@ export component MainWindow inherits Window {
     callback game-set-msaa(int);
     callback apply-game;
     callback reset-game;
+
+    // Login tab (tab 4)
+    in property <[LoginRow]> login-rows;
+    in property <string> login-status;
+    in property <string> login-folder;
+    // Data/patch-ZZ.mpq is somebody's own file: it is never touched.
+    in property <bool> login-foreign: false;
+    callback pick-login(string);
+    // Pictures of the screens, in the order of the rows after "Default".
+    property <[image]> login-thumbs: [
+        @image-url("../assets/login/northrend.jpg"), @image-url("../assets/login/cataclysm.jpg"),
+        @image-url("../assets/login/pandaria.jpg"), @image-url("../assets/login/warlords.jpg"),
+        @image-url("../assets/login/legion.jpg"), @image-url("../assets/login/legion-alt.jpg"),
+        @image-url("../assets/login/battleforazeroth.jpg"), @image-url("../assets/login/shadowlands.jpg"),
+        @image-url("../assets/login/dragonflight.jpg"), @image-url("../assets/login/warwithin.jpg"),
+    ];
 
     // Settings page
     in-out property <[SettingGroup]> setting-groups;
@@ -1295,6 +1393,49 @@ export component MainWindow inherits Window {
                 }
             }
 
+            // ---- Login tab: pick the picture and music of the game's login screen ----
+            if root.tab == 4 : VerticalLayout {
+                padding: 24px; padding-top: 18px; padding-bottom: 16px;
+                spacing: 10px;
+                Section { text: "LOGIN SCREEN"; height: 40px; vertical-alignment: center; }
+                Text {
+                    text: "The picture and music you see when the game starts. Pick one; it shows the next time the game starts.";
+                    color: Pal.text-dim; font-size: Fs.body; wrap: word-wrap;
+                }
+                login-area := Rectangle {
+                    vertical-stretch: 1;
+                    clip: true;
+                    property <int> cols: max(2, min(6, floor((self.width + 16px) / 232px)));
+                    property <length> tw: (self.width - 16px * (self.cols - 1)) / self.cols;
+                    property <length> th: self.tw * 9 / 16 + 54px;
+                    Flickable {
+                        content-width: parent.width;
+                        content-height: ceil(root.login-rows.length / login-area.cols) * (login-area.th + 16px);
+                        for r[i] in root.login-rows : LoginTile {
+                            x: mod(i, login-area.cols) * (login-area.tw + 16px);
+                            y: floor(i / login-area.cols) * (login-area.th + 16px);
+                            width: login-area.tw; height: login-area.th;
+                            title: r.title;
+                            is-default: i == 0;
+                            available: r.available;
+                            active: r.active;
+                            thumb: root.login-thumbs[max(0, i - 1)];
+                            clicked => { root.pick-login(r.id); }
+                        }
+                    }
+                }
+                if root.login-foreign : Text {
+                    text: "Data/patch-ZZ.mpq is a file of your own, so these choices are off. Rename or remove it to use them.";
+                    color: Pal.warn; font-size: Fs.body; wrap: word-wrap;
+                }
+                if root.game-running : Text { text: "The game is running. Close it to change the login screen."; color: Pal.warn; font-size: Fs.body; }
+                Text {
+                    text: root.login-status != "" ? root.login-status : "Login screens are read from " + root.login-folder;
+                    color: root.login-status != "" ? Pal.text : Pal.text-dim;
+                    font-size: Fs.body; wrap: word-wrap;
+                }
+            }
+
             // ---- Settings page: each category is a block of toggles laid out in as many columns as fit ----
             if root.tab == 2 : VerticalLayout {
                 padding: 24px; padding-top: 18px; padding-bottom: 18px;
@@ -1453,6 +1594,7 @@ export component MainWindow inherits Window {
                 padding: 4px; spacing: 4px;
                 TabButton { label: "Play"; icon: @image-url("../assets/icons/play.png"); active: root.tab == 0; clicked => { root.tab = 0; } }
                 TabButton { label: "Game"; icon: @image-url("../assets/icons/game.png"); active: root.tab == 1; clicked => { root.tab = 1; } }
+                TabButton { label: "Login"; icon: @image-url("../assets/icons/login.png"); active: root.tab == 4; clicked => { root.tab = 4; } }
                 TabButton { label: "Settings"; icon: @image-url("../assets/icons/settings.png"); active: root.tab == 2; clicked => { root.tab = 2; } }
                 TabButton { label: "Diagnostics"; icon: @image-url("../assets/icons/diagnostics.png"); active: root.tab == 3; clicked => { root.tab = 3; } }
             }

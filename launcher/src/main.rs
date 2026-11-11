@@ -13,6 +13,7 @@ mod client;
 mod diagnostics;
 mod quips;
 mod game;
+mod loginscreen;
 mod settings;
 mod updater;
 
@@ -180,6 +181,19 @@ fn show_game(ui: &MainWindow, g: &game::Game) {
     ui.set_game_resolution_bad(res_bad);
     // An empty realm is only a problem once something else was changed (a fresh client has none yet).
     ui.set_game_problem(g.problem().filter(|_| g.is_dirty()).unwrap_or("").into());
+}
+
+/// Fills the Login tab from what is on disk.
+fn show_login(ui: &MainWindow, client: &std::path::Path) {
+    let st = loginscreen::state(client);
+    let rows: Vec<LoginRow> = st
+        .entries
+        .iter()
+        .map(|e| LoginRow { id: e.id.into(), title: e.title.into(), available: e.available && !st.foreign_file, active: e.active })
+        .collect();
+    ui.set_login_rows(ModelRc::new(VecModel::from(rows)));
+    ui.set_login_foreign(st.foreign_file);
+    ui.set_login_folder(st.packs_dir.display().to_string().into());
 }
 
 fn show_game_text(ui: &MainWindow, g: &game::Game) {
@@ -647,6 +661,27 @@ fn main() -> Result<(), slint::PlatformError> {
             if let Some(g) = m.borrow().as_ref() {
                 show_game(&ui, g);
             }
+        });
+    }
+
+    // ---- Login tab ----
+    if let Some(dir) = client_dir.as_deref() {
+        show_login(&ui, dir);
+    }
+    {
+        let weak = ui.as_weak();
+        let dir = client_dir.clone();
+        ui.on_pick_login(move |id| {
+            let (Some(dir), Some(ui)) = (&dir, weak.upgrade()) else { return };
+            let message = if client::game_running() {
+                "The game is running. Close it first.".to_string()
+            } else {
+                match loginscreen::select(dir, id.as_str()) {
+                    Ok(msg) | Err(msg) => msg,
+                }
+            };
+            ui.set_login_status(message.into());
+            show_login(&ui, dir);
         });
     }
 

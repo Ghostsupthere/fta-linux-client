@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Builds the small white-on-transparent glyphs in assets/icons/ (the launcher tints them with `colorize`):
-play, game, settings, diagnostics, check, refresh, maximize, restore, external.
+play, game, settings, diagnostics, check, refresh, maximize, restore, login, external.
 
     python3 assets/make-icons.py
 
@@ -110,6 +110,15 @@ def restore():
     save(img, "restore")
 
 
+def login():
+    img, d = canvas()
+    # a doorway with an arrow going in
+    d.rounded_rectangle((p(26), p(6), p(58), p(58)), radius=p(14), outline=WHITE, width=p(6), corners=(True, True, False, False))
+    d.line([(p(4), p(34)), (p(34), p(34))], fill=WHITE, width=p(6))
+    d.polygon([(p(26), p(20)), (p(44), p(34)), (p(26), p(48))], fill=WHITE)
+    save(img, "login")
+
+
 def external():
     img, d = canvas()
     d.line([(p(24), p(40)), (p(52), p(12))], fill=WHITE, width=p(7))
@@ -118,6 +127,6 @@ def external():
     save(img, "external")
 
 
-for fn in (play, game, settings, diagnostics, check, refresh, maximize, restore, external):
+for fn in (play, game, settings, diagnostics, check, refresh, maximize, restore, login, external):
     fn()
 print("wrote", ", ".join(sorted(f.name for f in HERE.glob("*.png"))))

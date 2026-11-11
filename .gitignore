@@ -3,3 +3,7 @@
 /payload/
 *.run
 *.tar.gz
+
+# Login-screen pack builder: reference screenshots of the scenes (large, regenerable) and Python caches.
+/tools/login-packs/clean-shots/
+__pycache__/

@@ -58,6 +58,13 @@ menu, or run `FTA-Linux/launcher.sh` in your client folder. The window can be re
 - **Settings**: the WarcraftXL and performance options as checkboxes in columns by category, with presets and a
   Safe mode, and a Debugging section (Lua errors, logging switches). **Apply** saves them and keeps the previous
   files in `FTA-Linux/settings-backup/`. Nothing is saved while the game is running.
+- **Login**: choose the picture, music and look of the game's login and character-select screens from a grid of
+  previews (the screens of Wrath of the Lich King through The War Within, or *Default*). Pick one and it applies the
+  next time the game starts; *Default* brings the original back. The screens are not part of the installer: each one
+  is a small pack, `login-<name>.mpq`, that you put in `Data/LoginScreens/` (a screen without its file is greyed out
+  as *Not installed*). The launcher makes the choice by linking `Data/patch-ZZ.mpq` to the pack; a `patch-ZZ.mpq` of
+  your own is never touched, and nothing is changed while the game runs. The packs are built from a client's
+  `patch-c.mpq` with `tools/login-packs/` (see the README there).
 - **Diagnostics**: checks the system, graphics driver, game files and libraries, shows the report and copies or saves
   it to attach to a bug report (it holds no account data).
 
