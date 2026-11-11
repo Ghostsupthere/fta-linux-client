@@ -41,6 +41,14 @@ fits (this needs the `patch` tool), and otherwise the file is left alone. Origin
 `.tar.gz`. These are Lua files shared with the Windows client in the same folder, so Windows gets the fixes too.
 Up to v0.2.6 they were a separate `FTA-Addon-Fixes.tar.gz` download; from v0.2.7 the single `.run` is all you need.
 
+**Login screens.** The ten login screens for the launcher's Login tab are a separate download (about 207 MB, kept
+on Google Drive; the launcher's Login tab links to it too). The installer offers to fetch them and asks first (it
+never downloads them in an update, and `--yes` answers no); `--login-screens` downloads them without asking and
+`--no-login-screens` skips the offer. The download must match a checksum built into the installer, and only the
+`login-<name>.mpq` files in it are copied, into `Data/LoginScreens/`. It needs `curl`; unpacking uses `unzip`,
+`python3` or `bsdtar`, whichever is installed. If it cannot download, the installer prints the link so you can do it by
+hand: extract the archive inside your client's `Data` folder.
+
 ### The launcher (Realmgate)
 
 The launcher comes with the installer (there is no separate download). Open **Realmgate** from your applications

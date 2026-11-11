@@ -867,6 +867,9 @@ export component MainWindow inherits Window {
     in property <string> login-folder;
     // Data/patch-ZZ.mpq is somebody's own file: it is never touched.
     in property <bool> login-foreign: false;
+    in property <bool> login-missing: false;
+    in property <string> login-download-url;
+    callback refresh-login();
     callback pick-login(string);
     // Pictures of the screens, in the order of the rows after "Default".
     property <[image]> login-thumbs: [
@@ -1401,6 +1404,17 @@ export component MainWindow inherits Window {
                 Text {
                     text: "The picture and music you see when the game starts. Pick one; it shows the next time the game starts.";
                     color: Pal.text-dim; font-size: Fs.body; wrap: word-wrap;
+                }
+                if root.login-missing : HorizontalLayout {
+                    spacing: 10px;
+                    height: 40px;
+                    Text {
+                        text: "Some screens are not installed. Download the pack (about 200 MB), extract it inside your game's Data folder, then press Check again.";
+                        color: Pal.warn; font-size: Fs.body; wrap: word-wrap;
+                        horizontal-stretch: 1; vertical-alignment: center;
+                    }
+                    PresetPill { height: 36px; width: 210px; label: "Download login screens"; clicked => { root.open-link(root.login-download-url); } }
+                    PresetPill { height: 36px; width: 120px; label: "Check again"; clicked => { root.refresh-login(); } }
                 }
                 login-area := Rectangle {
                     vertical-stretch: 1;

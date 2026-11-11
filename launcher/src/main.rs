@@ -24,6 +24,7 @@ const ALLOWED_LINKS: &[&str] = &[
     "https://wiki.downloadautism.com/",
     "https://github.com/Ghostsupthere",
     "https://github.com/Ghostsupthere/fta-linux-client/releases",
+    loginscreen::PACKS_URL,
 ];
 
 /// The launcher's own config folder (`~/.config/fta-linux-launcher`): the theme choice and an optional quips.txt.
@@ -192,6 +193,7 @@ fn show_login(ui: &MainWindow, client: &std::path::Path) {
         .map(|e| LoginRow { id: e.id.into(), title: e.title.into(), available: e.available && !st.foreign_file, active: e.active })
         .collect();
     ui.set_login_rows(ModelRc::new(VecModel::from(rows)));
+    ui.set_login_missing(st.entries.iter().any(|e| !e.available));
     ui.set_login_foreign(st.foreign_file);
     ui.set_login_folder(st.packs_dir.display().to_string().into());
 }
@@ -684,6 +686,17 @@ fn main() -> Result<(), slint::PlatformError> {
             show_login(&ui, dir);
         });
     }
+
+    {
+        let weak = ui.as_weak();
+        let dir = client_dir.clone();
+        ui.on_refresh_login(move || {
+            let (Some(dir), Some(ui)) = (&dir, weak.upgrade()) else { return };
+            ui.set_login_status("".into());
+            show_login(&ui, dir);
+        });
+    }
+    ui.set_login_download_url(loginscreen::PACKS_URL.into());
 
     // ---- Updates ----
     let release_slot: Arc<Mutex<Option<updater::Release>>> = Arc::new(Mutex::new(None));

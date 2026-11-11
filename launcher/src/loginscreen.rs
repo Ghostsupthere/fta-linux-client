@@ -8,6 +8,10 @@
 
 use std::path::{Path, PathBuf};
 
+/// Where the login-screen packs can be downloaded (one archive with all ten; extract it inside the game's Data
+/// folder so the files end up in Data/LoginScreens/).
+pub const PACKS_URL: &str = "https://drive.google.com/file/d/13WPuTZ77LCYdlWmD3Ia8pWvgxXBau5E-/view?usp=sharing";
+
 /// The screens in the order the tab shows them. The first (empty id) is the game's own screen.
 pub const SCREENS: &[(&str, &str)] = &[
     ("", "Default"),
@@ -152,6 +156,12 @@ mod tests {
         let mut bytes = b"MPQ\x1a".to_vec();
         bytes.resize(4096, 0);
         fs::write(pack_file(&client.join("Data/LoginScreens"), id), bytes).unwrap();
+    }
+
+    #[test]
+    fn the_download_link_is_one_the_launcher_may_open() {
+        assert!(PACKS_URL.starts_with("https://drive.google.com/file/d/"));
+        assert!(crate::ALLOWED_LINKS.contains(&PACKS_URL));
     }
 
     #[test]
