@@ -1,8 +1,8 @@
 FTA addon fixes
 ===============
 
-Ten small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
-five in Questie-335, one in NPCBotPaperdoll).
+Eleven small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
+six in Questie-335, one in NPCBotPaperdoll).
 They are optional and independent of the Linux client: they apply to the Interface folder on any platform.
 Close the game before copying.
 
@@ -85,6 +85,14 @@ Close the game before copying.
    Elf's quest permissions onto the Murloc); the paperdoll's race-name table gets [31] = "Murloc". Harmless without a Murloc.
    Status: the Questie error is gone in play; the paperdoll name was not looked at in play.
 
+10. Questie-335, Modules/Quest/QuestEventHandler.lua: error after accepting and quickly removing a quest
+   Symptom: "QuestEventHandler.lua:285: attempt to index field '?' (a nil value)" (seen with quest 1447).
+   Cause: accepting a quest queues its accept handling (combat queue, or a retry while objectives are not cached yet).
+   If the quest is abandoned, turned in or auto-completed before that runs, its entry in Questie's quest-log table is
+   already gone and the handler indexed nil. MarkQuestAsAbandoned had the same unguarded access.
+   Fix: HandleQuestAccepted returns early and MarkQuestAsAbandoned does nothing when the quest is no longer tracked.
+   Status: found from an in-game error report; the fix has not been re-tested in play.
+
 Credit: the Questie map-icon fixes (items 4b and 4c, 5, 6 and 7) are by Grandpa_Boris.
 
 Install
@@ -94,7 +102,7 @@ up under FTA-Linux/addon-fix-backup/ and applies the fixes: a file is replaced o
 fixes were made for, otherwise the patch is applied if it fits (needs the "patch" tool), otherwise the file is left
 alone. Use --no-fixes to skip it, or --fixes PATH to point at a fixes folder.
 
-Option A, replace the ten files by hand. These are complete copies of the files as shipped in the base client, so
+Option A, replace the eleven files by hand. These are complete copies of the files as shipped in the base client, so
 only use this if your ElvUI is 6.09 and your Questie-335 and AshenBotUpgrade match the base client. Copy the Interface folder from
 this archive over the Interface folder of your client folder (the one that holds Wow64 and Data).
 

@@ -8,3 +8,4 @@ Interface/AddOns/Questie-335/Database/Zones/zoneDB.lua	Questie: deterministic zo
 Interface/AddOns/Questie-335/ServerBridge/Bridge.lua	Questie bridge: keeps exploration triggers, stable catalog loading and map-area lookup
 Interface/AddOns/NPCBotPaperdoll/NPCBotPaperdoll.lua	NPC Bot Paperdoll: shows the race name of a Murloc bot
 Interface/AddOns/Questie-335/Modules/QuestiePlayer.lua	Questie: a Murloc gets the same race-restricted quests as a High Elf
+Interface/AddOns/Questie-335/Modules/Quest/QuestEventHandler.lua	Questie: no Lua error when a quest is removed right after it was accepted
