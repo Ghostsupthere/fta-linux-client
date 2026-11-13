@@ -17,7 +17,7 @@
 #   --login-screens  download the login screens (about 207 MB from Google Drive) without asking
 #   --no-login-screens  do not offer the login screens
 #   --murloc         download the Murloc race patch (about 12 MB from Google Drive) without asking
-#   --no-murloc      do not offer the Murloc race patch
+#   --no-murloc      do not install the Murloc race patch, now or in later updates (the launcher's Update remembers this)
 #   --murloc-file F  install the Murloc patch from this local patch-ZD.mpq instead of downloading it
 #   --update         for the launcher's Update button: no questions, no sudo, no terminal; keeps the shortcut
 #                    (pointing it at the launcher), applies addon fixes only if they were applied before
@@ -398,12 +398,14 @@ murloc_patch() {
     local dest=$client/Data/patch-ZD.mpq have src dl="" got
     have=$(hash_of "$dest")
     if [[ $have == "$MURLOC_PATCH_SHA256" ]]; then printf '\nMurloc race patch: already installed.\n'; return 0; fi
-    if (( update )) && [[ ! -f $dest ]]; then
-        printf '\nMurloc race patch: not installed here, so an update leaves it out. Run the installer by hand to add it.\n'; return 0
+    if [[ $murloc_dl == yes ]]; then rm -f -- "$client/FTA-Linux/no-murloc"
+    elif [[ -f $client/FTA-Linux/no-murloc ]]; then
+        printf '\nMurloc race patch: left out (you opted out earlier). Run the installer by hand with --murloc to add it.\n'; return 0
     fi
     printf '\nMurloc race patch: adds the Murloc playable race (Alliance) to the character-creation screen and the game tables.\n'
     printf 'It is one 12 MB file, Data/patch-ZD.mpq; delete it to remove the race again.\n'
     [[ -f $dest ]] && printf 'A different patch-ZD.mpq is installed here; it will be kept in FTA-Linux/murloc-backup/.\n'
+    (( update )) && printf 'An update installs it so the race shows up. To opt out, run the installer once with --no-murloc; updates then leave it alone.\n'
     if [[ $murloc_dl != yes ]] && ! ask 'Install it now?' Y; then printf 'Skipped.\n'; return 0; fi
     if [[ -n $murloc_file ]]; then
         [[ -f $murloc_file ]] || { printf 'Local file %s does not exist.\n' "$murloc_file"; return 0; }
@@ -438,7 +440,10 @@ murloc_patch() {
     [[ -z $dl ]] || rm -rf -- "$dl"
     return 0
 }
-if [[ $murloc_dl != no ]]; then
+if [[ $murloc_dl == no ]]; then
+    mkdir -p -- "$client/FTA-Linux" && : >"$client/FTA-Linux/no-murloc" || true
+    printf '\nMurloc race patch: not installed; later updates leave it out too (run with --murloc to change that).\n'
+else
     murloc_patch || printf 'The Murloc patch could not be set up (the install itself is fine).\n'
 fi
 
