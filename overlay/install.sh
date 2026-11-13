@@ -32,7 +32,7 @@ done
 # Overwrite our own files (Wow64, FTA-Linux); keep anything else that exists unless --force. The backups the
 # launcher and the installer made of the person's own files, and their debug switches, survive a reinstall.
 if [[ -d $target/FTA-Linux ]]; then
-    find "$target/FTA-Linux" -mindepth 1 -maxdepth 1 ! -name settings-backup ! -name addon-fix-backup ! -name debug.env ! -name murloc-backup ! -name no-murloc -exec rm -rf -- {} +
+    find "$target/FTA-Linux" -mindepth 1 -maxdepth 1 ! -name settings-backup ! -name addon-fix-backup ! -name debug.env ! -name murloc-backup ! -name no-murloc ! -name texture-level-set ! -name Config.wtf.before-texture-level -exec rm -rf -- {} +
 else
     mkdir -p -- "$target/FTA-Linux"
 fi

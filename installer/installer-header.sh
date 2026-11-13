@@ -16,9 +16,10 @@
 #   --no-fixes       do not apply addon fixes
 #   --login-screens  download the login screens (about 207 MB from Google Drive) without asking
 #   --no-login-screens  do not offer the login screens
-#   --murloc         download the Murloc race patch (about 12 MB from Google Drive) without asking
+#   --murloc         download the Murloc race patch (about 13 MB from Google Drive) without asking
 #   --no-murloc      do not install the Murloc race patch, now or in later updates (the launcher's Update remembers this)
 #   --murloc-file F  install the Murloc patch from this local patch-ZD.mpq instead of downloading it
+#   --no-texture-level  do not set componentTextureLevel 9 in WTF/Config.wtf (see the Murloc skins below)
 #   --update         for the launcher's Update button: no questions, no sudo, no terminal; keeps the shortcut
 #                    (pointing it at the launcher), applies addon fixes only if they were applied before
 set -euo pipefail
@@ -35,11 +36,11 @@ LOGIN_SCREENS_SHA256=a03c6881b1ece9525020972ffbcc3f510f6b9d58c94a166b800f0d13179
 # because it carries game models and textures. The file must match this checksum or nothing is installed from it.
 MURLOC_PATCH_URL='https://drive.google.com/file/d/1r84grn0yiBx3A063Vl-5wrkK9rwi2gm0/view?usp=sharing'
 MURLOC_PATCH_ID=1r84grn0yiBx3A063Vl-5wrkK9rwi2gm0
-MURLOC_PATCH_SHA256=78d8802b98a823dac464181eeaa7a5eb1a8c2e5679c5c5d15e5cd933627bb5e8
+MURLOC_PATCH_SHA256=df580c5ef1afaa8f31e6c962b0490e04ad8c940e3f6818c6cf9adb51d2fbb156
 
 self=$(readlink -f -- "$0")
 ORIGINAL_ARGS="$*"
-client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file=""
+client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" texture_level=1
 out_tty=0; [[ -t 1 ]] && out_tty=1   # the log below replaces stdout, so ask now
 while (( $# )); do
     case $1 in
@@ -50,13 +51,14 @@ while (( $# )); do
         --no-fixes) use_fixes=0 ;;
         --login-screens) login_dl=yes ;;
         --no-login-screens) login_dl=no ;;
+        --no-texture-level) texture_level=0 ;;
         --murloc) murloc_dl=yes ;;
         --no-murloc) murloc_dl=no ;;
         --murloc-file) murloc_file=${2:?--murloc-file needs a patch-ZD.mpq}; murloc_dl=yes; shift ;;
         --update) update=1; assume=1; interm=1 ;;
         --in-terminal) interm=1 ;;
         --pause) pause=1 ;;
-        --help|-h) sed -n '2,23p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --help|-h) sed -n '2,24p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
     esac
     shift
@@ -72,6 +74,7 @@ if (( ! interm )) && [[ ! -t 0 || ! -t 1 ]]; then
     [[ $login_dl == no ]] && relaunch+=(--no-login-screens)
     [[ $murloc_dl == yes && -z $murloc_file ]] && relaunch+=(--murloc)
     [[ $murloc_dl == no ]] && relaunch+=(--no-murloc)
+    (( ! texture_level )) && relaunch+=(--no-texture-level)
     [[ -n $murloc_file ]] && relaunch+=(--murloc-file "$murloc_file")
     [[ -n $fixes_path ]] && relaunch+=(--fixes "$fixes_path")
     [[ -n $client ]] && relaunch+=(--client "$client")
@@ -403,7 +406,7 @@ murloc_patch() {
         printf '\nMurloc race patch: left out (you opted out earlier). Run the installer by hand with --murloc to add it.\n'; return 0
     fi
     printf '\nMurloc race patch: adds the Murloc playable race (Alliance) to the character-creation screen and the game tables.\n'
-    printf 'It is one 12 MB file, Data/patch-ZD.mpq; delete it to remove the race again.\n'
+    printf 'It is one 13 MB file, Data/patch-ZD.mpq; delete it to remove the race again.\n'
     [[ -f $dest ]] && printf 'A different patch-ZD.mpq is installed here; it will be kept in FTA-Linux/murloc-backup/.\n'
     (( update )) && printf 'An update installs it so the race shows up. To opt out, run the installer once with --no-murloc; updates then leave it alone.\n'
     if [[ $murloc_dl != yes ]] && ! ask 'Install it now?' Y; then printf 'Skipped.\n'; return 0; fi
@@ -445,6 +448,30 @@ if [[ $murloc_dl == no ]]; then
     printf '\nMurloc race patch: not installed; later updates leave it out too (run with --murloc to change that).\n'
 else
     murloc_patch || printf 'The Murloc patch could not be set up (the install itself is fine).\n'
+fi
+
+# ---- character texture size ----------------------------------------------------------------------
+# The game builds every character skin in a working picture whose size is the console variable componentTextureLevel: the default 8 means
+# 256x256, 9 means 512x512. Higher resolution character skins (the Murloc skins) only show their detail at 9. Once per client folder (a marker
+# file FTA-Linux/texture-level-set records it), this adds SET componentTextureLevel "9" to WTF/Config.wtf, only if the file exists and does not
+# mention the variable. Nothing already in the file is changed; later changes by the player are never overwritten. --no-texture-level skips it.
+texture_level_apply() {
+    local cfg=$client/WTF/Config.wtf marker=$client/FTA-Linux/texture-level-set eol=$'\n'
+    [[ -f $marker ]] && return 0
+    [[ -f $cfg ]] || { printf '\nCharacter textures: no WTF/Config.wtf yet (start the game once), so componentTextureLevel is left at the default. Type /console componentTextureLevel 9 in game for sharper character skins.\n'; return 0; }
+    if grep -qi 'componentTextureLevel' "$cfg"; then
+        printf '\nCharacter textures: componentTextureLevel is already set in Config.wtf; left alone.\n'
+        : >"$marker"; return 0
+    fi
+    grep -q $'\r' "$cfg" && eol=$'\r\n'
+    cp -p -- "$cfg" "$client/FTA-Linux/Config.wtf.before-texture-level" 2>/dev/null || true
+    [[ -s $cfg && $(tail -c1 "$cfg" | od -An -c | tr -d ' ') != '\n' ]] && printf '%s' "$eol" >>"$cfg"
+    printf 'SET componentTextureLevel "9"%s' "$eol" >>"$cfg" || { printf 'Could not write %s.\n' "$cfg"; return 0; }
+    : >"$marker"
+    printf '\nCharacter textures: set componentTextureLevel 9 in Config.wtf (512x512 character skins; the old file is kept as FTA-Linux/Config.wtf.before-texture-level). Undo with /console componentTextureLevel 8.\n'
+}
+if (( texture_level )); then
+    texture_level_apply || printf 'The texture setting could not be applied (the install itself is fine).\n'
 fi
 
 # ---- system libraries ----------------------------------------------------------------------------
