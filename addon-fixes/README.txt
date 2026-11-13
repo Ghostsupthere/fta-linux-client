@@ -1,8 +1,8 @@
 FTA addon fixes
 ===============
 
-Eight small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
-four in Questie-335).
+Ten small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
+five in Questie-335, one in NPCBotPaperdoll).
 They are optional and independent of the Linux client: they apply to the Interface folder on any platform.
 Close the game before copying.
 
@@ -78,6 +78,13 @@ Close the game before copying.
    damage can be shown as an upgrade; weapons with real stats are scored as before.
    Status: tooltip lines confirmed in play; a wand upgrade was not re-tested after the change.
 
+9. Murloc race (custom playable race 31): Questie-335 Compat/Compat.lua and Modules/QuestiePlayer.lua, NPCBotPaperdoll.lua
+   Symptom: "Questie: [ERROR] Unsupported player race: Murloc" for a Murloc character; the bot paperdoll has no name for the race.
+   Cause: the race is not in the addons' race tables, and Questie's quest data only carries race bits for the original races.
+   Fix: Compat.lua gets Murloc = 31; QuestiePlayer.lua matches race-restricted quests as a High Elf (the server mirrors the High
+   Elf's quest permissions onto the Murloc); the paperdoll's race-name table gets [31] = "Murloc". Harmless without a Murloc.
+   Status: the Questie error is gone in play; the paperdoll name was not looked at in play.
+
 Credit: the Questie map-icon fixes (items 4b and 4c, 5, 6 and 7) are by Grandpa_Boris.
 
 Install
@@ -87,7 +94,7 @@ up under FTA-Linux/addon-fix-backup/ and applies the fixes: a file is replaced o
 fixes were made for, otherwise the patch is applied if it fits (needs the "patch" tool), otherwise the file is left
 alone. Use --no-fixes to skip it, or --fixes PATH to point at a fixes folder.
 
-Option A, replace the eight files by hand. These are complete copies of the files as shipped in the base client, so
+Option A, replace the ten files by hand. These are complete copies of the files as shipped in the base client, so
 only use this if your ElvUI is 6.09 and your Questie-335 and AshenBotUpgrade match the base client. Copy the Interface folder from
 this archive over the Interface folder of your client folder (the one that holds Wow64 and Data).
 

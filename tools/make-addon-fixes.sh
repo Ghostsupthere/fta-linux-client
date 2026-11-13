@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Build the optional addon-fixes side payload that the installer applies when it finds it next to itself.
 #
-#   tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR [OUT_DIR] [README_FILE] [SUMMARY_FILE]
+#   tools/make-addon-fixes.sh BEFORE_DIR AFTER_DIR [OUT_DIR] [README_FILE] [SUMMARY_FILE] [EXTRA_ORIGINALS_FILE]
 #
 # BEFORE_DIR and AFTER_DIR are two copies of the client's folder tree holding only Interface/AddOns/... files:
 # the originals and the fixed versions. Every file that differs becomes a manifest entry, a patch and a drop-in
 # copy. New files are not supported (the installer only fixes files the client already has).
+# EXTRA_ORIGINALS_FILE (optional) has lines "<relative path><TAB><sha256>[,<sha256>...]": earlier fixed versions of a file that the
+# installer may also replace with the drop-in copy (so a client that has an older release of the fixes is brought up to date).
 # SUMMARY_FILE (optional) has one line per file: "<relative path><TAB><one-line description>"; the installer
 # shows it when it asks.
 # Output (OUT_DIR, default ./dist): FTA-Addon-Fixes/ (the folder) and FTA-Addon-Fixes.tar.gz.
@@ -17,6 +19,7 @@ repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 out=${3:-$repo/dist}
 readme=${4:-}
 summaries=${5:-}
+extras=${6:-}
 fail() { printf 'make-addon-fixes: %s\n' "$*" >&2; exit 1; }
 [[ -d $before/Interface/AddOns && -d $after/Interface/AddOns ]] || fail 'both trees need an Interface/AddOns folder'
 mkdir -p -- "$out"
@@ -43,6 +46,10 @@ while IFS= read -r -d '' file; do
         "$(sha256sum -- "$after/$rel" | cut -d' ' -f1)" "$patch" "$note" >>"$dest/fixes.manifest"
 done < <(find "$after/Interface/AddOns" -type f -print0 | sort -z)
 (( n )) || fail 'no differing files found'
+if [[ -n $extras ]]; then
+    awk -F'\t' -v OFS='\t' 'NR == FNR { if ($1 !~ /^#/ && NF >= 2) more[$1] = $2; next } ($1 in more) { $2 = $2 "," more[$1] } { print }' \
+        "$extras" "$dest/fixes.manifest" >"$dest/fixes.manifest.new" && mv -- "$dest/fixes.manifest.new" "$dest/fixes.manifest"
+fi
 
 if [[ -n $readme ]]; then cp -- "$readme" "$dest/README.txt"; fi
 tar -C "$out" --sort=name --owner=0 --group=0 --numeric-owner -cf - FTA-Addon-Fixes | gzip -n >"$out/FTA-Addon-Fixes.tar.gz"

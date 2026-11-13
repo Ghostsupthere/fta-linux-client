@@ -16,6 +16,9 @@
 #   --no-fixes       do not apply addon fixes
 #   --login-screens  download the login screens (about 207 MB from Google Drive) without asking
 #   --no-login-screens  do not offer the login screens
+#   --murloc         download the Murloc race patch (about 12 MB from Google Drive) without asking
+#   --no-murloc      do not offer the Murloc race patch
+#   --murloc-file F  install the Murloc patch from this local patch-ZD.mpq instead of downloading it
 #   --update         for the launcher's Update button: no questions, no sudo, no terminal; keeps the shortcut
 #                    (pointing it at the launcher), applies addon fixes only if they were applied before
 set -euo pipefail
@@ -28,9 +31,15 @@ LOGIN_SCREENS_URL='https://drive.google.com/file/d/13WPuTZ77LCYdlWmD3Ia8pWvgxXBa
 LOGIN_SCREENS_ID=13WPuTZ77LCYdlWmD3Ia8pWvgxXBau5E-
 LOGIN_SCREENS_SHA256=a03c6881b1ece9525020972ffbcc3f510f6b9d58c94a166b800f0d13179040d3
 
+# The Murloc race patch (patch-ZD.mpq, about 12 MB: the custom playable Murloc race of the From The Ashes realm) is a separate download too,
+# because it carries game models and textures. The file must match this checksum or nothing is installed from it.
+MURLOC_PATCH_URL='https://drive.google.com/file/d/1r84grn0yiBx3A063Vl-5wrkK9rwi2gm0/view?usp=sharing'
+MURLOC_PATCH_ID=1r84grn0yiBx3A063Vl-5wrkK9rwi2gm0
+MURLOC_PATCH_SHA256=78d8802b98a823dac464181eeaa7a5eb1a8c2e5679c5c5d15e5cd933627bb5e8
+
 self=$(readlink -f -- "$0")
 ORIGINAL_ARGS="$*"
-client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask
+client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file=""
 out_tty=0; [[ -t 1 ]] && out_tty=1   # the log below replaces stdout, so ask now
 while (( $# )); do
     case $1 in
@@ -41,10 +50,13 @@ while (( $# )); do
         --no-fixes) use_fixes=0 ;;
         --login-screens) login_dl=yes ;;
         --no-login-screens) login_dl=no ;;
+        --murloc) murloc_dl=yes ;;
+        --no-murloc) murloc_dl=no ;;
+        --murloc-file) murloc_file=${2:?--murloc-file needs a patch-ZD.mpq}; murloc_dl=yes; shift ;;
         --update) update=1; assume=1; interm=1 ;;
         --in-terminal) interm=1 ;;
         --pause) pause=1 ;;
-        --help|-h) sed -n '2,20p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --help|-h) sed -n '2,23p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
     esac
     shift
@@ -58,6 +70,9 @@ if (( ! interm )) && [[ ! -t 0 || ! -t 1 ]]; then
     (( ! use_fixes )) && relaunch+=(--no-fixes)
     [[ $login_dl == yes ]] && relaunch+=(--login-screens)
     [[ $login_dl == no ]] && relaunch+=(--no-login-screens)
+    [[ $murloc_dl == yes && -z $murloc_file ]] && relaunch+=(--murloc)
+    [[ $murloc_dl == no ]] && relaunch+=(--no-murloc)
+    [[ -n $murloc_file ]] && relaunch+=(--murloc-file "$murloc_file")
     [[ -n $fixes_path ]] && relaunch+=(--fixes "$fixes_path")
     [[ -n $client ]] && relaunch+=(--client "$client")
     for term in x-terminal-emulator gnome-terminal ptyxis konsole xfce4-terminal mate-terminal lxterminal tilix kitty alacritty foot xterm; do
@@ -246,7 +261,7 @@ fixes_apply() {
         if [[ $cur == "$fixed" ]]; then
             printf '  already applied: %s\n' "$rel"; same=$((same + 1)); continue
         fi
-        if [[ $cur == "$orig" && -f $fixes_dir/$rel && $(hash_of "$fixes_dir/$rel") == "$fixed" ]]; then
+        if [[ ",$orig," == *",$cur,"* && -f $fixes_dir/$rel && $(hash_of "$fixes_dir/$rel") == "$fixed" ]]; then
             if fixes_backup "$rel" && cp -- "$fixes_dir/$rel" "$target"; then
                 printf '  fixed: %s\n' "$rel"; applied=$((applied + 1))
             else
@@ -369,6 +384,62 @@ if (( update )); then
     printf '\nLogin screens: not touched by an update.\n'
 elif [[ $login_dl != no ]]; then
     login_screens || printf 'Login screens could not be set up (the install itself is fine).\n'
+fi
+
+# ---- optional Murloc race patch ------------------------------------------------------------------
+# One file, Data/patch-ZD.mpq: the Murloc playable race (model, nine skin colours, the matching game tables and character-creation
+# screen). Without it a client cannot create a Murloc. It is a separate download (about 12 MB, Google Drive) that must match
+# MURLOC_PATCH_SHA256, or a local file given with --murloc-file. An older copy is kept in FTA-Linux/murloc-backup/. To remove the race
+# from this client, delete Data/patch-ZD.mpq. Nothing here can make the install fail.
+murloc_manual() {
+    printf 'To add it by hand: download %s\nand put the file patch-ZD.mpq in %s/Data.\n' "$MURLOC_PATCH_URL" "$client"
+}
+murloc_patch() {
+    local dest=$client/Data/patch-ZD.mpq have src dl="" got
+    have=$(hash_of "$dest")
+    if [[ $have == "$MURLOC_PATCH_SHA256" ]]; then printf '\nMurloc race patch: already installed.\n'; return 0; fi
+    if (( update )) && [[ ! -f $dest ]]; then
+        printf '\nMurloc race patch: not installed here, so an update leaves it out. Run the installer by hand to add it.\n'; return 0
+    fi
+    printf '\nMurloc race patch: adds the Murloc playable race (Alliance) to the character-creation screen and the game tables.\n'
+    printf 'It is one 12 MB file, Data/patch-ZD.mpq; delete it to remove the race again.\n'
+    [[ -f $dest ]] && printf 'A different patch-ZD.mpq is installed here; it will be kept in FTA-Linux/murloc-backup/.\n'
+    if [[ $murloc_dl != yes ]] && ! ask 'Install it now?' Y; then printf 'Skipped.\n'; return 0; fi
+    if [[ -n $murloc_file ]]; then
+        [[ -f $murloc_file ]] || { printf 'Local file %s does not exist.\n' "$murloc_file"; return 0; }
+        src=$murloc_file
+    else
+        local x
+        for x in curl sha256sum; do
+            command -v "$x" >/dev/null 2>&1 || { printf 'Cannot download it here: %s is not installed.\n' "$x"; murloc_manual; return 0; }
+        done
+        dl=$(mktemp -d -p "$client/Data" .fta-murloc-download.XXXXXX) || { printf 'Cannot write to %s/Data.\n' "$client"; return 0; }
+        printf 'Downloading...\n'
+        if ! drive_fetch "$MURLOC_PATCH_ID" "$dl/patch-ZD.mpq"; then
+            printf 'The download failed (no network, or Google Drive refused it).\n'; murloc_manual; rm -rf -- "$dl"; return 0
+        fi
+        src=$dl/patch-ZD.mpq
+    fi
+    got=$(hash_of "$src")
+    if [[ $got != "$MURLOC_PATCH_SHA256" ]]; then
+        printf 'The file is not the expected one (sha256 %s), so it was not installed.\n' "$got"
+        murloc_manual; [[ -z $dl ]] || rm -rf -- "$dl"; return 0
+    fi
+    if [[ -f $dest ]]; then
+        local bk=$client/FTA-Linux/murloc-backup/$(date +%Y%m%d-%H%M%S)
+        mkdir -p -- "$bk" && cp -p -- "$dest" "$bk/patch-ZD.mpq" && printf 'Kept the previous patch-ZD.mpq in %s\n' "$bk"
+    fi
+    # copied beside the target and renamed into place, so a running game never sees a half-written archive
+    if cp -f -- "$src" "$dest.new" && mv -f -- "$dest.new" "$dest"; then
+        printf 'Installed Data/patch-ZD.mpq (Murloc race). Restart the game to see it in character creation.\n'
+    else
+        rm -f -- "$dest.new"; printf 'Could not write %s.\n' "$dest"
+    fi
+    [[ -z $dl ]] || rm -rf -- "$dl"
+    return 0
+}
+if [[ $murloc_dl != no ]]; then
+    murloc_patch || printf 'The Murloc patch could not be set up (the install itself is fine).\n'
 fi
 
 # ---- system libraries ----------------------------------------------------------------------------
