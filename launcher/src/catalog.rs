@@ -76,6 +76,7 @@ pub const SETTINGS: &[Setting] = &[
     s("WXL_UNIT_OVERLAYS", Cfg, "MODELS AND GAMEPLAY", "Target outline", "Outline around your target and other unit overlays", false),
     s("WXL_QUEST_RENDERING", Cfg, "MODELS AND GAMEPLAY", "Quest markers in the world", "Quest markers and objective rings drawn in the world", false),
     s("WXL_MUTE_CAST_FAILURE_SOUNDS", Cfg, "MODELS AND GAMEPLAY", "Mute cast-failure sounds", "Silences the error sound when a spell cannot be cast", false),
+    s("WXL_MUTE_MURLOC_VOICE", Cfg, "MODELS AND GAMEPLAY", "Mute Murloc voices", "Silences the Murloc \"mrgl\" cries; a Murloc alt bot makes one on every stride", false),
     s("WXL_GAMEOBJECT_EDITOR", Cfg, "MODELS AND GAMEPLAY", "Game-object editor (GM)", "The in-world editor overlay for game masters", true),
     // ---- Performance ----
     s("WXL_PARTICLE_THREADS", Cfg, "PERFORMANCE", "Threaded particle updates", "Update particle effects on worker threads", true),
