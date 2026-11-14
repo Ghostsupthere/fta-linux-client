@@ -96,6 +96,7 @@ pub const SETTINGS: &[Setting] = &[
     dbg("FTA_TRACE_PORTRAIT", "Portrait camera trace", "Logs how character portrait and preview cameras are set up", "1", "0"),
     dbg("FTA_TRACE_UNINVITE", "Party-error trace", "Logs where \"is not in your party\" errors come from", "1", "0"),
     dbg("WXL_SAMPLE_PROFILE", "Call-stack sampling (developers)", "500 samples a second; kill -USR1 on the game writes Logs/samples.txt. Can slow or hang the game", "500", "0"),
+    dbg("WXL_HEAP_CHECK", "Heap checker (developers)", "Guards every allocation and logs overflows and use-after-free with the call site (WXL_HEAP_CHECK lines in the launch log). Slows the game and uses more memory", "1", "0"),
     dbg("WXL_SHADOW_MIN_INFLUENCES", "Old shadow shader choice (comparison)", "Brings back the stock shadow selection, so shields cast a wrong shadow again. Only to compare", "0", "1"),
 ];
 
