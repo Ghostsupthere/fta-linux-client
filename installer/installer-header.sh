@@ -20,6 +20,8 @@
 #   --no-murloc      do not install the Murloc race patch, now or in later updates (the launcher's Update remembers this)
 #   --murloc-file F  install the Murloc patch from this local patch-ZD.mpq instead of downloading it
 #   --no-texture-level  do not set componentTextureLevel 9 in WTF/Config.wtf (see the Murloc skins below)
+#   --no-realmdesk   do not install the RealmDesk addon (support tickets), now or in later updates
+#   --realmdesk      install RealmDesk even if you opted out earlier
 #   --update         for the launcher's Update button: no questions, no sudo, no terminal; keeps the shortcut
 #                    (pointing it at the launcher), applies addon fixes only if they were applied before
 set -euo pipefail
@@ -40,7 +42,7 @@ MURLOC_PATCH_SHA256=df580c5ef1afaa8f31e6c962b0490e04ad8c940e3f6818c6cf9adb51d2fb
 
 self=$(readlink -f -- "$0")
 ORIGINAL_ARGS="$*"
-client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" texture_level=1
+client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" texture_level=1 realmdesk=auto
 out_tty=0; [[ -t 1 ]] && out_tty=1   # the log below replaces stdout, so ask now
 while (( $# )); do
     case $1 in
@@ -52,13 +54,15 @@ while (( $# )); do
         --login-screens) login_dl=yes ;;
         --no-login-screens) login_dl=no ;;
         --no-texture-level) texture_level=0 ;;
+        --realmdesk) realmdesk=yes ;;
+        --no-realmdesk) realmdesk=no ;;
         --murloc) murloc_dl=yes ;;
         --no-murloc) murloc_dl=no ;;
         --murloc-file) murloc_file=${2:?--murloc-file needs a patch-ZD.mpq}; murloc_dl=yes; shift ;;
         --update) update=1; assume=1; interm=1 ;;
         --in-terminal) interm=1 ;;
         --pause) pause=1 ;;
-        --help|-h) sed -n '2,24p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --help|-h) sed -n '2,26p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
     esac
     shift
@@ -75,6 +79,8 @@ if (( ! interm )) && [[ ! -t 0 || ! -t 1 ]]; then
     [[ $murloc_dl == yes && -z $murloc_file ]] && relaunch+=(--murloc)
     [[ $murloc_dl == no ]] && relaunch+=(--no-murloc)
     (( ! texture_level )) && relaunch+=(--no-texture-level)
+    [[ $realmdesk == yes ]] && relaunch+=(--realmdesk)
+    [[ $realmdesk == no ]] && relaunch+=(--no-realmdesk)
     [[ -n $murloc_file ]] && relaunch+=(--murloc-file "$murloc_file")
     [[ -n $fixes_path ]] && relaunch+=(--fixes "$fixes_path")
     [[ -n $client ]] && relaunch+=(--client "$client")
@@ -331,6 +337,57 @@ if (( use_fixes )); then
         printf '\nNo addon fixes are bundled with this installer.\n'
     fi
 fi
+
+# ---- RealmDesk addon -----------------------------------------------------------------------------
+# RealmDesk is the in-game support ticket window (/desk). The addon travels inside this installer as FTA-Addons/RealmDesk and is
+# copied to Interface/AddOns/RealmDesk. It needs AIO_Client (part of the base client) and does nothing until the realm has its
+# server side switched on. Updating replaces the addon's own files; the player's RealmDeskConfig.lua (only created when missing) and
+# Media/Avatars are never touched, and a file that is replaced is first kept in FTA-Linux/realmdesk-backup/. --no-realmdesk skips it
+# and is remembered (FTA-Linux/no-realmdesk) so later updates leave it out; --realmdesk installs it again.
+realmdesk_install() {
+    local src=$tmp/FTA-Addons/RealmDesk dest=$client/Interface/AddOns/RealmDesk marker=$client/FTA-Linux/no-realmdesk
+    local file rel cur new=0 changed=0 same=0 bk="" version question
+    [[ -f $src/RealmDesk.toc ]] || { printf '\nRealmDesk addon: not bundled with this installer.\n'; return 0; }
+    if [[ $realmdesk == no ]]; then
+        mkdir -p -- "$client/FTA-Linux" && : >"$marker" || true
+        printf '\nRealmDesk addon: not installed; later updates leave it out too (run with --realmdesk to change that).\n'; return 0
+    fi
+    if [[ $realmdesk == yes ]]; then rm -f -- "$marker"
+    elif [[ -f $marker ]]; then
+        printf '\nRealmDesk addon: left out (you opted out earlier). Run the installer by hand with --realmdesk to add it.\n'; return 0
+    fi
+    version=$(sed -n 's/^## Version: *//p' "$src/RealmDesk.toc" | head -n 1 | tr -d '\r')
+    if [[ ! -d $client/Interface/AddOns/AIO_Client ]]; then
+        printf '\nRealmDesk addon: not installed, because the client has no Interface/AddOns/AIO_Client (RealmDesk needs it).\n'; return 0
+    fi
+    if command -v sha256sum >/dev/null 2>&1 && ! (cd -- "$src" && sha256sum -c --quiet MANIFEST.sha256 >/dev/null 2>&1); then
+        printf '\nRealmDesk addon: the bundled copy does not match its checksums; not installed.\n'; return 0
+    fi
+    printf '\nRealmDesk addon %s: in-game support tickets (type /desk after logging in). It is a normal addon; remove it by deleting Interface/AddOns/RealmDesk.\n' "${version:-?}"
+    [[ -d $dest ]] || new=1
+    question='Update it now?'; (( new )) && question='Install it now?'
+    # An update from the launcher asks nothing: the addon is installed or refreshed unless the person opted out.
+    if (( ! update )) && [[ $realmdesk != yes ]] && ! ask "$question" Y; then printf 'Skipped.\n'; return 0; fi
+    while IFS= read -r -d '' file; do
+        rel=${file#"$src"/}
+        [[ $rel == MANIFEST.sha256 ]] && continue
+        mkdir -p -- "$dest/$(dirname -- "$rel")" || { printf 'Could not write %s.\n' "$dest"; return 0; }
+        if [[ $rel == RealmDeskConfig.lua && -e $dest/$rel ]]; then same=$((same + 1)); continue; fi   # the player's own file
+        cur=$(hash_of "$dest/$rel")
+        if [[ $cur == "$(hash_of "$file")" ]]; then same=$((same + 1)); continue; fi
+        if [[ -f $dest/$rel ]]; then
+            [[ -n $bk ]] || bk=$client/FTA-Linux/realmdesk-backup/$(date +%Y%m%d-%H%M%S)
+            mkdir -p -- "$bk/$(dirname -- "$rel")" && cp -p -- "$dest/$rel" "$bk/$rel" || { printf 'Could not back up %s; left unchanged.\n' "$rel"; continue; }
+        fi
+        cp -f -- "$file" "$dest/$rel.new" && mv -f -- "$dest/$rel.new" "$dest/$rel" || { rm -f -- "$dest/$rel.new"; printf 'Could not write %s.\n' "$dest/$rel"; continue; }
+        changed=$((changed + 1))
+    done < <(find "$src" -type f -print0 | sort -z)
+    if (( new )); then printf 'Installed RealmDesk %s (%d files) into Interface/AddOns/RealmDesk.\n' "${version:-?}" "$changed"
+    else printf 'RealmDesk updated: %d file(s) replaced, %d already current or kept.\n' "$changed" "$same"; fi
+    [[ -z $bk ]] || printf 'Replaced files kept in %s\n' "$bk"
+    printf 'In game, enable RealmDesk (and AIO_Client) in the AddOns list at character selection; /reload applies an update.\n'
+}
+realmdesk_install || printf 'The RealmDesk addon could not be set up (the install itself is fine).\n'
 
 # ---- optional login screens ----------------------------------------------------------------------
 # A separate download (about 207 MB) kept on Google Drive: ten small packs, installed as

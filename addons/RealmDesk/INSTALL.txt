@@ -1,0 +1,49 @@
+# RealmDesk — player installation
+
+For World of Warcraft 3.3.5a (12340). Requires the realm's matching AIO_Client addon
+and an activated RealmDesk server. AIO_Client is already included in the FTA client;
+this ZIP does not replace it. If it is missing, obtain it from your realm operator.
+
+## Install
+
+1. Close WoW completely.
+2. Open your WoW folder, then Interface/AddOns.
+3. Extract the ZIP there. The result must be:
+
+   Interface/AddOns/RealmDesk/RealmDesk.toc
+
+   Avoid an extra nested RealmDesk or ZIP-name folder.
+4. At character selection, open AddOns and enable AIO_Client and RealmDesk.
+5. Log in and type /desk or /realmdesk.
+
+## Updating an existing copy
+
+Keep your existing RealmDeskConfig.lua (imported client settings) and Media/Avatars
+(custom profile pictures). Merge/replace the other packaged files. Do not delete
+the whole existing folder or replace your imported config with the empty template.
+Restart WoW after updating fonts/textures. Saved themes, window/editor sizes and
+profile preferences are managed by AIO; do not delete AIO saved variables to update.
+
+## Using it
+
+Create a ticket from My Tickets, then read updates and post a public reply. The
+conversation and right information column scroll independently. Drag Resize History
+to show more updates, the column divider to change widths, and text-area handles
+to expand editors downward. Profile offers built-in icon choices; themes are in the
+sidebar. Staff controls appear only for accounts authorized by the realm.
+
+Core tickets do not need the capture companion. Screenshot/clip uploads and remote
+custom profile pictures require the separately configured companion/media service;
+ask the realm operator if these are available.
+
+## Troubleshooting
+
+- Missing dependency AIO_Client: install/enable the realm-provided matching addon.
+- RealmDesk absent in AddOns: check the folder path above and restart WoW.
+- Server unavailable: the realm operator must activate compatible RealmDesk scripts;
+  reinstalling the player ZIP alone does not install a server.
+- Lua error: report the complete error/stack trace, addon version and what you clicked.
+
+This package contains only the RealmDesk client, bundled font/texture assets and
+these instructions. It contains no server scripts, database files, staff credentials
+or account-specific profile pictures/config imports.

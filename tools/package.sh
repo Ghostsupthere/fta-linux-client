@@ -14,6 +14,8 @@
 # default OUT_DIR/FTA-Addon-Fixes, and travel inside the installer; they are not a separate download.
 # RELEASE_TAG (for example v0.2.10) is recorded in FTA-Linux/RELEASE so the launcher knows which release is
 # installed; leave it out for a development build.
+# Addons that ship with the installer come from ADDONS_DIR, default addons/ in this repository (one folder per addon;
+# tools/update-realmdesk.sh refreshes addons/RealmDesk from a player ZIP). They travel inside the installer as FTA-Addons/.
 # The scripts and README come from this repository. Output (OUT_DIR, default ./dist):
 #   fta-linux-client.tar.gz   FTA-Linux-Installer.run   FTA-Linux-SHA256SUMS.txt
 set -euo pipefail
@@ -54,6 +56,19 @@ if [[ -f $fixes/fixes.manifest ]]; then
     printf 'Addon fixes bundled from %s\n' "$fixes"
 else
     printf 'No addon fixes found at %s; the installer will have none.\n' "$fixes"
+fi
+addons=${ADDONS_DIR:-$repo/addons}
+if [[ -d $addons/RealmDesk ]]; then
+    # The installer treats RealmDeskConfig.lua as the player's own file; only the empty template may ship.
+    [[ -f $addons/RealmDesk/RealmDesk.toc && -f $addons/RealmDesk/MANIFEST.sha256 ]] || fail "$addons/RealmDesk is not a RealmDesk player bundle"
+    (cd -- "$addons/RealmDesk" && sha256sum -c --quiet MANIFEST.sha256) || fail "$addons/RealmDesk does not match its MANIFEST.sha256"
+    [[ ! -e $addons/RealmDesk/Media/Avatars ]] || fail "$addons/RealmDesk/Media/Avatars must not ship"
+    (( $(stat -c %s -- "$addons/RealmDesk/RealmDeskConfig.lua") < 512 )) || fail "$addons/RealmDesk/RealmDeskConfig.lua is not the empty template"
+    mkdir -p -- "$stage/FTA-Addons"
+    cp -a -- "$addons/RealmDesk" "$stage/FTA-Addons/RealmDesk"
+    printf 'Addon bundled: RealmDesk %s\n' "$(sed -n 's/^## Version: *//p' "$addons/RealmDesk/RealmDesk.toc")"
+else
+    printf 'No RealmDesk addon at %s; the installer will not carry it.\n' "$addons"
 fi
 chmod +x "$stage/install.sh" "$stage/payload/Wow64" "$stage/payload/FTA-Linux/play.sh" "$stage/payload/FTA-Linux/install-deps.sh"
 if find "$stage" -type l | grep -q .; then fail 'the payload contains symlinks'; fi

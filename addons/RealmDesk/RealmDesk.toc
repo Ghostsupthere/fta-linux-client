@@ -1,0 +1,9 @@
+## Interface: 30300
+## Title: RealmDesk
+## Notes: In-game support ticket workspace. Requires RealmDesk server scripts for ticket operations.
+## Author: RealmDesk
+## Version: 0.3.3-staging
+## Dependencies: AIO_Client
+
+RealmDeskConfig.lua
+RealmDesk_Client.lua

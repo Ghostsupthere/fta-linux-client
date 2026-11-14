@@ -41,6 +41,13 @@ fits (this needs the `patch` tool), and otherwise the file is left alone. Origin
 `.tar.gz`. These are Lua files shared with the Windows client in the same folder, so Windows gets the fixes too.
 Up to v0.2.6 they were a separate `FTA-Addon-Fixes.tar.gz` download; from v0.2.7 the single `.run` is all you need.
 
+**RealmDesk.** The installer also carries the RealmDesk addon (the in-game support ticket window, `/desk`) and copies it to
+`Interface/AddOns/RealmDesk` on every install and update, without asking. It needs `Interface/AddOns/AIO_Client` (part of the
+base client) and only does something once the realm has its server side switched on. Your own `RealmDeskConfig.lua` and
+`Media/Avatars` are never touched, and any file it replaces is kept in `FTA-Linux/realmdesk-backup/`. Use `--no-realmdesk` to
+leave it out (later updates then leave it out too) and `--realmdesk` to put it back. The addon files live in `addons/RealmDesk`;
+`tools/update-realmdesk.sh` refreshes them from a RealmDesk player ZIP.
+
 **Login screens.** The ten login screens for the launcher's Login tab are a separate download (about 207 MB, kept
 on Google Drive; the launcher's Login tab links to it too). The installer offers to fetch them and asks first (it
 never downloads them in an update, and `--yes` answers no); `--login-screens` downloads them without asking and
@@ -218,6 +225,7 @@ the words after the colon become the subtitle. Keep each paragraph under about 2
 | `installer/installer-header.sh` | The one-click installer's script part (the payload is appended at build time) |
 | `tools/package.sh` | Builds the release files from a payload |
 | `tools/make-addon-fixes.sh` | Builds the addon-fixes folder (`fixes.manifest`, patches, fixed files) that `package.sh` bundles into the installer |
+| `addons/` | Addons the installer copies into the client (`addons/RealmDesk`); `tools/update-realmdesk.sh` refreshes it from a player ZIP, `package.sh` bundles it |
 | `launcher/` | The launcher (Rust and Slint): update check, Play, game and WarcraftXL settings, diagnostics. `ui/main.slint` is the whole interface (design tokens at the top); `src/` the logic |
 | `launcher/assets/` | Fonts, artwork and the small scripts that build the pictures from it: `make-background.py` (scene and backdrops), `make-portal.py` (the animated portal), `make-frame.py` (the metal frame), `make-icons.py`, `make-effects.py` |
 | `tools/build-launcher.sh` | Builds the launcher against the game's glibc (needs Nix) |
