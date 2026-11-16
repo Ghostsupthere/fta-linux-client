@@ -109,6 +109,18 @@ export struct LoginRow {
     active: bool,
 }
 
+// One optional piece of the install on the Extras tab.
+export struct ExtraRow {
+    id: string,
+    title: string,
+    detail: string,
+    // 0 in use, 1 taken out (or left out at install), 2 not installed
+    state: int,
+    // "remove", "restore" or empty (nothing to do)
+    action: string,
+    action-label: string,
+}
+
 export struct ChangeRow {
     // 0 release heading, 1 lead-in, 2 paragraph, 3 bullet
     kind: int,
@@ -204,10 +216,12 @@ component TabButton inherits Rectangle {
     in property <string> label;
     in property <image> icon;
     in property <bool> active;
+    // Narrow windows drop the icons so six tabs still clear the update chip.
+    in property <bool> show-icon: true;
     callback clicked;
     property <bool> kbd: false;
     height: 36px;
-    width: tab-row.preferred-width + 34px;
+    width: tab-row.preferred-width + 28px;
     border-radius: 10px;
     background: root.active ? @linear-gradient(180deg, Pal.portal-hi 0%, Pal.portal-lo 100%) : (ta.pressed ? #7dff3a30 : (ta.has-hover ? #7dff3a1c : transparent));
     animate background { duration: Mo.fast; }
@@ -216,10 +230,11 @@ component TabButton inherits Rectangle {
     accessible-action-default => { root.clicked(); }
     tab-row := HorizontalLayout {
         alignment: center;
-        spacing: 8px;
+        spacing: root.show-icon ? 8px : 0px;
         Rectangle {
-            width: 16px;
+            width: root.show-icon ? 16px : 0px;
             Image {
+                visible: root.show-icon;
                 source: root.icon;
                 y: (parent.height - 16px) / 2;
                 width: 16px; height: 16px;
@@ -871,6 +886,13 @@ export component MainWindow inherits Window {
     in property <string> login-download-url;
     callback refresh-login();
     callback pick-login(string);
+
+    // Extras tab (tab 5)
+    in property <[ExtraRow]> extras-rows;
+    in property <string> extras-status;
+    in property <string> extras-error;
+    callback refresh-extras();
+    callback extras-act(string, string);
     // Pictures of the screens, in the order of the rows after "Default".
     property <[image]> login-thumbs: [
         @image-url("../assets/login/northrend.jpg"), @image-url("../assets/login/cataclysm.jpg"),
@@ -1450,6 +1472,77 @@ export component MainWindow inherits Window {
                 }
             }
 
+            // ---- Extras tab: the optional pieces of the install, each can be taken out and put back ----
+            if root.tab == 5 : VerticalLayout {
+                padding: 24px; padding-top: 18px; padding-bottom: 16px;
+                spacing: 10px;
+                Section { text: "EXTRAS"; height: 40px; vertical-alignment: center; }
+                Text {
+                    text: "Optional pieces of this install. Taking one out moves its files aside (nothing is deleted) and updates leave it out until you put it back. The Windows client is never touched.";
+                    color: Pal.text-dim; font-size: Fs.body; wrap: word-wrap;
+                }
+                if root.extras-error != "" : Text { text: root.extras-error; color: Pal.warn; font-size: Fs.body; wrap: word-wrap; }
+                extras-area := Rectangle {
+                    vertical-stretch: 1;
+                    clip: true;
+                    extras-flick := Flickable {
+                        content-width: parent.width;
+                        content-height: root.extras-rows.length * 96px;
+                        for r[i] in root.extras-rows : Rectangle {
+                            x: 0px; y: i * 96px;
+                            width: parent.width - 14px; height: 88px;
+                            border-radius: Rad.md;
+                            background: #ffffff10;
+                            border-width: 1px;
+                            border-color: r.state == 0 ? #5ad18a30 : Pal.line;
+                            HorizontalLayout {
+                                padding-left: 18px; padding-right: 16px; padding-top: 12px; padding-bottom: 12px; spacing: 14px;
+                                VerticalLayout {
+                                    horizontal-stretch: 1;
+                                    spacing: 4px;
+                                    HorizontalLayout {
+                                        spacing: 10px;
+                                        alignment: start;
+                                        Text { text: r.title; color: Pal.text; font-size: Fs.base; font-weight: 700; vertical-alignment: center; }
+                                        Text {
+                                            text: r.state == 0 ? "In use" : (r.state == 1 ? "Taken out" : "Not installed");
+                                            color: r.state == 0 ? Pal.portal : (r.state == 1 ? Pal.warn : Pal.text-dim);
+                                            font-size: Fs.small; font-weight: 600; vertical-alignment: center;
+                                        }
+                                    }
+                                    Text { text: r.detail; color: Pal.text-dim; font-size: Fs.small; wrap: word-wrap; overflow: elide; vertical-stretch: 1; }
+                                }
+                                if r.action != "" : PresetPill {
+                                    y: (parent.height - self.height) / 2;
+                                    width: 120px; height: 36px;
+                                    label: r.action-label;
+                                    clicked => { root.extras-act(r.id, r.action); }
+                                }
+                            }
+                        }
+                    }
+                    if extras-flick.content-height > extras-flick.height : Rectangle {
+                        x: parent.width - 6px;
+                        width: 4px;
+                        border-radius: 2px;
+                        background: #ffffff55;
+                        height: max(36px, extras-flick.height * extras-flick.height / extras-flick.content-height);
+                        y: -extras-flick.content-y / (extras-flick.content-height - extras-flick.height) * (extras-flick.height - self.height);
+                    }
+                }
+                if root.game-running : Text { text: "The game is running. Close it to change these."; color: Pal.warn; font-size: Fs.body; }
+                HorizontalLayout {
+                    spacing: 10px;
+                    Text {
+                        horizontal-stretch: 1; vertical-alignment: center;
+                        text: root.extras-status != "" ? root.extras-status : "To remove everything this installer added, run FTA-Linux/uninstall.sh (it asks first and keeps what it moves).";
+                        color: root.extras-status != "" ? Pal.text : Pal.text-dim;
+                        font-size: Fs.body; wrap: word-wrap;
+                    }
+                    PresetPill { height: 36px; width: 110px; label: "Check again"; clicked => { root.refresh-extras(); } }
+                }
+            }
+
             // ---- Settings page: each category is a block of toggles laid out in as many columns as fit ----
             if root.tab == 2 : VerticalLayout {
                 padding: 24px; padding-top: 18px; padding-bottom: 18px;
@@ -1606,11 +1699,12 @@ export component MainWindow inherits Window {
             border-color: Pal.rim;
             nav-row := HorizontalLayout {
                 padding: 4px; spacing: 4px;
-                TabButton { label: "Play"; icon: @image-url("../assets/icons/play.png"); active: root.tab == 0; clicked => { root.tab = 0; } }
-                TabButton { label: "Game"; icon: @image-url("../assets/icons/game.png"); active: root.tab == 1; clicked => { root.tab = 1; } }
-                TabButton { label: "Login"; icon: @image-url("../assets/icons/login.png"); active: root.tab == 4; clicked => { root.tab = 4; } }
-                TabButton { label: "Settings"; icon: @image-url("../assets/icons/settings.png"); active: root.tab == 2; clicked => { root.tab = 2; } }
-                TabButton { label: "Diagnostics"; icon: @image-url("../assets/icons/diagnostics.png"); active: root.tab == 3; clicked => { root.tab = 3; } }
+                TabButton { show-icon: root.width >= 1160px; label: "Play"; icon: @image-url("../assets/icons/play.png"); active: root.tab == 0; clicked => { root.tab = 0; } }
+                TabButton { show-icon: root.width >= 1160px; label: "Game"; icon: @image-url("../assets/icons/game.png"); active: root.tab == 1; clicked => { root.tab = 1; } }
+                TabButton { show-icon: root.width >= 1160px; label: "Login"; icon: @image-url("../assets/icons/login.png"); active: root.tab == 4; clicked => { root.tab = 4; } }
+                TabButton { show-icon: root.width >= 1160px; label: "Extras"; icon: @image-url("../assets/icons/check.png"); active: root.tab == 5; clicked => { root.tab = 5; } }
+                TabButton { show-icon: root.width >= 1160px; label: "Settings"; icon: @image-url("../assets/icons/settings.png"); active: root.tab == 2; clicked => { root.tab = 2; } }
+                TabButton { show-icon: root.width >= 1160px; label: "Diagnostics"; icon: @image-url("../assets/icons/diagnostics.png"); active: root.tab == 3; clicked => { root.tab = 3; } }
             }
         }
 

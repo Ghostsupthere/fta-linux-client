@@ -14,6 +14,7 @@ mod diagnostics;
 mod quips;
 mod game;
 mod loginscreen;
+mod optional;
 mod settings;
 mod updater;
 
@@ -196,6 +197,40 @@ fn show_login(ui: &MainWindow, client: &std::path::Path) {
     ui.set_login_missing(st.entries.iter().any(|e| !e.available));
     ui.set_login_foreign(st.foreign_file);
     ui.set_login_folder(st.packs_dir.display().to_string().into());
+}
+
+/// Fills the Extras tab from what `FTA-Linux/optional.sh` reports.
+fn show_extras(ui: &MainWindow, client: &std::path::Path) {
+    match optional::list(client) {
+        Ok(pieces) => {
+            let rows: Vec<ExtraRow> = pieces
+                .iter()
+                .map(|p| ExtraRow {
+                    id: p.id.clone().into(),
+                    title: p.title.clone().into(),
+                    detail: p.detail.clone().into(),
+                    state: match p.state {
+                        optional::State::Installed => 0,
+                        optional::State::Removed => 1,
+                        optional::State::Absent => 2,
+                    },
+                    action: p.action().unwrap_or("").into(),
+                    action_label: match p.action() {
+                        Some("remove") => "Take out",
+                        Some(_) => "Put back",
+                        None => "",
+                    }
+                    .into(),
+                })
+                .collect();
+            ui.set_extras_rows(ModelRc::new(VecModel::from(rows)));
+            ui.set_extras_error("".into());
+        }
+        Err(e) => {
+            ui.set_extras_rows(ModelRc::new(VecModel::from(Vec::<ExtraRow>::new())));
+            ui.set_extras_error(e.into());
+        }
+    }
 }
 
 fn show_game_text(ui: &MainWindow, g: &game::Game) {
@@ -698,6 +733,34 @@ fn main() -> Result<(), slint::PlatformError> {
     }
     ui.set_login_download_url(loginscreen::PACKS_URL.into());
 
+    // ---- Extras tab: take the optional pieces of the install out, or put them back ----
+    if let Some(dir) = client_dir.as_deref() {
+        show_extras(&ui, dir);
+    }
+    {
+        let weak = ui.as_weak();
+        let dir = client_dir.clone();
+        ui.on_extras_act(move |id, verb| {
+            let (Some(dir), Some(ui)) = (&dir, weak.upgrade()) else { return };
+            let message = if client::game_running() {
+                "The game is running. Close it first.".to_string()
+            } else {
+                optional::act(dir, verb.as_str(), id.as_str())
+            };
+            ui.set_extras_status(message.into());
+            show_extras(&ui, dir);
+        });
+    }
+    {
+        let weak = ui.as_weak();
+        let dir = client_dir.clone();
+        ui.on_refresh_extras(move || {
+            let (Some(dir), Some(ui)) = (&dir, weak.upgrade()) else { return };
+            ui.set_extras_status("".into());
+            show_extras(&ui, dir);
+        });
+    }
+
     // ---- Updates ----
     let release_slot: Arc<Mutex<Option<updater::Release>>> = Arc::new(Mutex::new(None));
     let cancel = Arc::new(AtomicBool::new(false));
@@ -917,7 +980,7 @@ fn main() -> Result<(), slint::PlatformError> {
         ui.window().set_size(slint::LogicalSize::new(w, h));
     }
 
-    // Development aid: start on a given tab (0 Play, 1 Game, 2 Settings, 3 Diagnostics), e.g. for screenshots.
+    // Development aid: start on a given tab (0 Play, 1 Game, 2 Settings, 3 Diagnostics, 4 Login, 5 Extras), e.g. for screenshots.
     if let Some(tab) = std::env::var("FTA_LAUNCHER_TAB").ok().and_then(|v| v.parse::<i32>().ok()) {
         ui.set_tab(tab);
     }

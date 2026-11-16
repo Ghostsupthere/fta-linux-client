@@ -574,6 +574,7 @@ elif (( shortcut )); then
 fi
 
 printf '\nDone. Start it any time with:  %s\n' "$start_script"
+(( update )) || printf 'Take pieces out again (Murloc race, RealmDesk, addon fixes, texture setting) from the launcher'"'"'s Extras tab or with FTA-Linux/optional.sh; FTA-Linux/uninstall.sh removes everything this installer added.\n'
 if [[ $start_script == */launcher.sh ]]; then start_question='Open the launcher now?'; else start_question='Start the game now?'; fi
 if ask "$start_question" N; then
     pause=0

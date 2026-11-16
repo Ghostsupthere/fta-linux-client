@@ -35,7 +35,9 @@ stage=$(mktemp -d)
 trap 'rm -rf -- "$stage"' EXIT
 mkdir -p -- "$stage/payload"
 cp -a -- "$payload/." "$stage/payload/"
-cp -- "$repo/overlay/FTA-Linux/play.sh" "$repo/overlay/FTA-Linux/install-deps.sh" "$repo/overlay/FTA-Linux/icon.png" "$stage/payload/FTA-Linux/"
+cp -- "$repo/overlay/FTA-Linux/play.sh" "$repo/overlay/FTA-Linux/install-deps.sh" "$repo/overlay/FTA-Linux/icon.png" \
+    "$repo/overlay/FTA-Linux/optional.sh" "$repo/overlay/FTA-Linux/uninstall.sh" "$repo/overlay/FTA-Linux/THIRD-PARTY-NOTICES.txt" "$stage/payload/FTA-Linux/"
+cp -r -- "$repo/overlay/FTA-Linux/licenses" "$stage/payload/FTA-Linux/licenses"
 if [[ -f $payload/FTA-Linux/fta-launcher ]]; then
     cp -- "$repo/overlay/FTA-Linux/launcher.sh" "$stage/payload/FTA-Linux/"
     chmod +x "$stage/payload/FTA-Linux/launcher.sh" "$stage/payload/FTA-Linux/fta-launcher"
@@ -70,7 +72,8 @@ if [[ -d $addons/RealmDesk ]]; then
 else
     printf 'No RealmDesk addon at %s; the installer will not carry it.\n' "$addons"
 fi
-chmod +x "$stage/install.sh" "$stage/payload/Wow64" "$stage/payload/FTA-Linux/play.sh" "$stage/payload/FTA-Linux/install-deps.sh"
+chmod +x "$stage/install.sh" "$stage/payload/Wow64" "$stage/payload/FTA-Linux/play.sh" "$stage/payload/FTA-Linux/install-deps.sh" \
+    "$stage/payload/FTA-Linux/optional.sh" "$stage/payload/FTA-Linux/uninstall.sh"
 if find "$stage" -type l | grep -q .; then fail 'the payload contains symlinks'; fi
 
 tarball=$out/fta-linux-client.tar.gz
