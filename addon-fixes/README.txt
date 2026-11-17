@@ -1,8 +1,8 @@
 FTA addon fixes
 ===============
 
-Eleven small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
-six in Questie-335, one in NPCBotPaperdoll).
+Twelve small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
+six in Questie-335, one in NPCBotPaperdoll, one in MobSpells).
 They are optional and independent of the Linux client: they apply to the Interface folder on any platform.
 Close the game before copying.
 
@@ -93,6 +93,12 @@ Close the game before copying.
    Fix: HandleQuestAccepted returns early and MarkQuestAsAbandoned does nothing when the quest is no longer tracked.
    Status: found from an in-game error report; the fix has not been re-tested in play.
 
+11. MobSpells, core.lua: the ability list only shows while Alt is held
+   Symptom: every mob tooltip carried a long list of the mob's abilities.
+   Fix: the list (and its descriptions) is only added while Alt is held; without Alt the tooltip says "Hold Alt to
+   show abilities". Pressing or releasing Alt rebuilds the open unit tooltip. The addon's options are unchanged.
+   Status: the logic was tested outside the game with stand-in functions; not yet looked at in play.
+
 Credit: the Questie map-icon fixes (items 4b and 4c, 5, 6 and 7) are by Grandpa_Boris.
 
 Install
@@ -102,7 +108,7 @@ up under FTA-Linux/addon-fix-backup/ and applies the fixes: a file is replaced o
 fixes were made for, otherwise the patch is applied if it fits (needs the "patch" tool), otherwise the file is left
 alone. Use --no-fixes to skip it, or --fixes PATH to point at a fixes folder.
 
-Option A, replace the eleven files by hand. These are complete copies of the files as shipped in the base client, so
+Option A, replace the twelve files by hand. These are complete copies of the files as shipped in the base client, so
 only use this if your ElvUI is 6.09 and your Questie-335 and AshenBotUpgrade match the base client. Copy the Interface folder from
 this archive over the Interface folder of your client folder (the one that holds Wow64 and Data).
 
