@@ -314,7 +314,14 @@ end
 
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:SetScript("OnEvent", function() Load() end)
+local asked = false
 frame:SetScript("OnUpdate", function()
+    -- The server only sends the saved shape at login. After a /reload nothing comes unasked, so ask once (the bridge defines
+    -- FtaBodyShape_Request on an FTA realm with the new server files; elsewhere it does not exist and nothing is sent).
+    if loaded and not synced and serverCode == nil and not asked and FtaBodyShape_Request and GetTime() - loadTime > 1 then
+        asked = true
+        pcall(FtaBodyShape_Request)
+    end
     -- No server answered (not an FTA realm, AIO is off, or this is a /reload): use the saved variables.
     if loaded and not synced and serverCode == nil and GetTime() - loadTime > 5 then
         synced = true

@@ -19,6 +19,8 @@
 #   --murloc         download the Murloc race patch (about 13 MB from Google Drive) without asking
 #   --no-murloc      do not install the Murloc race patch, now or in later updates (the launcher's Update remembers this)
 #   --murloc-file F  install the Murloc patch from this local patch-ZD.mpq instead of downloading it
+#   --housing        download the housing pack (about 760 MB from Google Drive, for the realm's player housing) without asking
+#   --housing-file F install the housing pack from this local FTA-Housing-Packs.zip instead of downloading it
 #   --no-texture-level  do not set componentTextureLevel 9 in WTF/Config.wtf (see the Murloc skins below)
 #   --no-realmdesk   do not install the RealmDesk addon (support tickets), now or in later updates
 #   --realmdesk      install RealmDesk even if you opted out earlier
@@ -38,6 +40,13 @@ LOGIN_SCREENS_URL='https://drive.google.com/file/d/13WPuTZ77LCYdlWmD3Ia8pWvgxXBa
 LOGIN_SCREENS_ID=13WPuTZ77LCYdlWmD3Ia8pWvgxXBau5E-
 LOGIN_SCREENS_SHA256=a03c6881b1ece9525020972ffbcc3f510f6b9d58c94a166b800f0d13179040d3
 
+# The housing pack (FTA-Housing-Packs.zip, about 760 MB: five archives with the decor models and room pieces for the realm's
+# player housing, plus a texture list) is an opt-in download. It must match this checksum or nothing is installed from it.
+HOUSING_PACK_URL='https://drive.google.com/file/d/18BoZmqHAzM6s4MMxlHBBGW6uTs7VE2M-/view?usp=sharing'
+HOUSING_PACK_ID=18BoZmqHAzM6s4MMxlHBBGW6uTs7VE2M-
+HOUSING_PACK_SHA256=2d342dee83b4456c42c96d89e854f11fbed46935fbfa6c5febf0172009df898f
+HOUSING_FILES=(Data/patch-ZE.mpq Data/patch-ZF.mpq Data/patch-ZG.mpq Data/patch-ZH.mpq Data/patch-ZI.mpq Utils/WarcraftXL/FileDataID.extra.csv)
+
 # The Murloc race patch (patch-ZD.mpq, about 12 MB: the custom playable Murloc race of the From The Ashes realm) is a separate download too,
 # because it carries game models and textures. The file must match this checksum or nothing is installed from it.
 MURLOC_PATCH_URL='https://drive.google.com/file/d/1r84grn0yiBx3A063Vl-5wrkK9rwi2gm0/view?usp=sharing'
@@ -46,7 +55,7 @@ MURLOC_PATCH_SHA256=df580c5ef1afaa8f31e6c962b0490e04ad8c940e3f6818c6cf9adb51d2fb
 
 self=$(readlink -f -- "$0")
 ORIGINAL_ARGS="$*"
-client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" texture_level=1 realmdesk=auto bodyshape=auto clickguard=auto
+client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" housing_dl=ask housing_file="" texture_level=1 realmdesk=auto bodyshape=auto clickguard=auto
 out_tty=0; [[ -t 1 ]] && out_tty=1   # the log below replaces stdout, so ask now
 while (( $# )); do
     case $1 in
@@ -67,10 +76,12 @@ while (( $# )); do
         --murloc) murloc_dl=yes ;;
         --no-murloc) murloc_dl=no ;;
         --murloc-file) murloc_file=${2:?--murloc-file needs a patch-ZD.mpq}; murloc_dl=yes; shift ;;
+        --housing) housing_dl=yes ;;
+        --housing-file) housing_file=${2:?--housing-file needs a FTA-Housing-Packs.zip}; housing_dl=yes; shift ;;
         --update) update=1; assume=1; interm=1 ;;
         --in-terminal) interm=1 ;;
         --pause) pause=1 ;;
-        --help|-h) sed -n '2,30p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --help|-h) sed -n '2,32p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
     esac
     shift
@@ -86,6 +97,8 @@ if (( ! interm )) && [[ ! -t 0 || ! -t 1 ]]; then
     [[ $login_dl == no ]] && relaunch+=(--no-login-screens)
     [[ $murloc_dl == yes && -z $murloc_file ]] && relaunch+=(--murloc)
     [[ $murloc_dl == no ]] && relaunch+=(--no-murloc)
+    [[ $housing_dl == yes && -z $housing_file ]] && relaunch+=(--housing)
+    [[ -n $housing_file ]] && relaunch+=(--housing-file "$housing_file")
     (( ! texture_level )) && relaunch+=(--no-texture-level)
     [[ $realmdesk == yes ]] && relaunch+=(--realmdesk)
     [[ $realmdesk == no ]] && relaunch+=(--no-realmdesk)
@@ -598,6 +611,86 @@ if [[ $murloc_dl == no ]]; then
 else
     murloc_patch || printf 'The Murloc patch could not be set up (the install itself is fine).\n'
 fi
+
+# ---- optional housing pack -----------------------------------------------------------------------
+# One download (about 760 MB, Google Drive): Data/patch-ZE.mpq to patch-ZI.mpq and Utils/WarcraftXL/FileDataID.extra.csv. Only
+# useful on the From The Ashes realm, and only once its housing feature is switched on. It is never added by an update and never
+# asked about during one: run the installer by hand and answer yes, or use --housing / --housing-file. The zip must match
+# HOUSING_PACK_SHA256; only the six files in HOUSING_FILES are taken out of it. Nothing here can make the install fail.
+housing_manual() {
+    printf 'To add it by hand: download %s\nand extract it inside %s (it holds a Data and a Utils/WarcraftXL folder).\n' "$HOUSING_PACK_URL" "$client"
+}
+housing_unzip() { # housing_unzip ZIP DEST: unpack with whatever is installed
+    if command -v unzip >/dev/null 2>&1; then unzip -q -o -- "$1" -d "$2"
+    elif command -v bsdtar >/dev/null 2>&1; then bsdtar -xf "$1" -C "$2"
+    elif command -v 7z >/dev/null 2>&1; then 7z x -y -bso0 -bsp0 -o"$2" -- "$1"
+    elif command -v python3 >/dev/null 2>&1; then python3 -m zipfile -e "$1" "$2"
+    else return 127; fi
+}
+housing_pack() {
+    local f missing=0 dl="" zip got free
+    for f in "${HOUSING_FILES[@]}"; do [[ -f $client/$f ]] || missing=1; done
+    if (( ! missing )); then printf '\nHousing pack: already installed.\n'; return 0; fi
+    if [[ $housing_dl != yes ]]; then
+        # Not asked during an update (it is big and only for one realm); a fresh install asks, default no.
+        (( update )) && return 0
+        printf '\nHousing pack: the art for player housing on the From The Ashes realm (decor models and room pieces).\n'
+        printf 'It is a separate download of about 760 MB from Google Drive and adds five archives to Data and one file to Utils/WarcraftXL.\n'
+        printf 'Only useful on that realm, and only once its housing feature is on. Take it out again from the launcher'\''s Extras tab.\n'
+        ask 'Download it now?' N || { printf 'Skipped. Run the installer by hand with --housing to add it later.\n'; return 0; }
+    else
+        rm -f -- "$client/FTA-Linux/no-housing"
+        printf '\nHousing pack: adding the housing art (about 760 MB).\n'
+    fi
+    if [[ -n $housing_file ]]; then
+        [[ -f $housing_file ]] || { printf 'Local file %s does not exist.\n' "$housing_file"; return 0; }
+        zip=$housing_file
+    else
+        local x
+        for x in curl sha256sum; do
+            command -v "$x" >/dev/null 2>&1 || { printf 'Cannot download it here: %s is not installed.\n' "$x"; housing_manual; return 0; }
+        done
+    fi
+    free=$(df -Pk -- "$client/Data" 2>/dev/null | awk 'NR==2 { print int($4 / 1024) }')
+    if [[ -n $free ]] && (( free < 2000 )); then printf 'Not enough free space in %s/Data (%s MB free, about 2000 MB needed while unpacking).\n' "$client" "$free"; return 0; fi
+    dl=$(mktemp -d -p "$client/Data" .fta-housing-download.XXXXXX) || { printf 'Cannot write to %s/Data.\n' "$client"; return 0; }
+    if [[ -z $housing_file ]]; then
+        printf 'Downloading (this can take a while)...\n'
+        if ! drive_fetch "$HOUSING_PACK_ID" "$dl/housing.zip"; then
+            printf 'The download failed (no network, or Google Drive refused it, for example when the daily download limit is reached).\n'
+            housing_manual; rm -rf -- "$dl"; return 0
+        fi
+        zip=$dl/housing.zip
+    fi
+    got=$(hash_of "$zip")
+    if [[ $got != "$HOUSING_PACK_SHA256" ]]; then
+        printf 'The file is not the expected one (sha256 %s), so nothing was installed.\n' "$got"
+        housing_manual; rm -rf -- "$dl"; return 0
+    fi
+    mkdir -p -- "$dl/x"
+    if ! housing_unzip "$zip" "$dl/x"; then
+        printf 'Could not unpack it (install unzip, bsdtar, 7z or python3).\n'; housing_manual; rm -rf -- "$dl"; return 0
+    fi
+    for f in "${HOUSING_FILES[@]}"; do
+        [[ -f $dl/x/$f ]] || { printf 'The archive is missing %s, so nothing was installed.\n' "$f"; rm -rf -- "$dl"; return 0; }
+    done
+    local done_n=0 bk=""
+    for f in "${HOUSING_FILES[@]}"; do
+        mkdir -p -- "$client/$(dirname -- "$f")" || continue
+        if [[ -f $client/$f ]] && ! cmp -s -- "$client/$f" "$dl/x/$f"; then
+            [[ -n $bk ]] || bk=$client/FTA-Linux/housing-backup/$(date +%Y%m%d-%H%M%S)
+            mkdir -p -- "$bk/$(dirname -- "$f")" && cp -p -- "$client/$f" "$bk/$f"
+        fi
+        # beside the target and renamed into place, so a running game never sees a half-written archive
+        if cp -f -- "$dl/x/$f" "$client/$f.new" && mv -f -- "$client/$f.new" "$client/$f"; then done_n=$((done_n + 1))
+        else rm -f -- "$client/$f.new"; printf 'Could not write %s.\n' "$client/$f"; fi
+    done
+    rm -rf -- "$dl"
+    [[ -z $bk ]] || printf 'Kept the previous files in %s\n' "$bk"
+    printf 'Installed %d of %d housing files. Restart the game to load them.\n' "$done_n" "${#HOUSING_FILES[@]}"
+    return 0
+}
+housing_pack || printf 'The housing pack could not be set up (the install itself is fine).\n'
 
 # ---- character texture size ----------------------------------------------------------------------
 # The game builds every character skin in a working picture whose size is the console variable componentTextureLevel: the default 8 means

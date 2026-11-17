@@ -70,11 +70,12 @@ can add the pieces below. Each one can be taken out again, and **nothing is ever
 | NetherBot Click Guard | `Interface/AddOns/NetherBotClickGuard` (`/nbcg` in game). Right-clicks pass straight through your NPCBots; hold the modifier key (Shift by default) to click one. Settings live in `WTF` | Yes, on every install and update unless you opted out (an older 1.1 copied in by hand is replaced; originals kept in `FTA-Linux/clickguard-backup/`) | launcher *Extras* tab, or `--no-clickguard` |
 | Addon fixes | A few addon files (listed before they change, originals kept in `FTA-Linux/addon-fix-backup/`). Shared with the Windows client in the same folder | Asked first; an update only re-applies them if you accepted before | launcher *Extras* tab, or `--no-fixes` |
 | Sharper character skins | One line in `WTF/Config.wtf` (`componentTextureLevel 9`, a copy of the old file is kept) | Yes, once, unless you opted out | launcher *Extras* tab, or `--no-texture-level` |
+| Housing pack | `Data/patch-ZE.mpq` to `patch-ZI.mpq` and `Utils/WarcraftXL/FileDataID.extra.csv` (760 MB, separate download). Only useful on the From The Ashes realm, and only once its housing feature is on | No: asked on a fresh install, default no; updates never add it | launcher *Extras* tab (`--housing` adds it, `--housing-file ZIP` uses a local copy) |
 | Login screens | `Data/LoginScreens/` (207 MB, separate download) and a link `Data/patch-ZZ.mpq` | No: asked, default no | the launcher's *Login* tab (*Default*) |
 
 The same switches work from a terminal: `FTA-Linux/optional.sh list`, `FTA-Linux/optional.sh remove murloc`
-(or `realmdesk`, `bodyshape`, `clickguard`, `fixes`, `texture`) and `FTA-Linux/optional.sh restore murloc`. To put back a piece that was never installed or
-was left out at install time, run the installer again with `--murloc`, `--realmdesk`, `--bodyshape`, `--clickguard`, and so on.
+(or `housing`, `realmdesk`, `bodyshape`, `clickguard`, `fixes`, `texture`) and `FTA-Linux/optional.sh restore murloc`. To put back a piece that was never installed or
+was left out at install time, run the installer again with `--murloc`, `--housing`, `--realmdesk`, `--bodyshape`, `--clickguard`, and so on.
 
 ### The launcher (Realmgate)
 

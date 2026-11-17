@@ -1,8 +1,8 @@
 FTA addon fixes
 ===============
 
-Twelve small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
-six in Questie-335, one in NPCBotPaperdoll, one in MobSpells).
+Thirteen small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
+seven in Questie-335, one in NPCBotPaperdoll, one in MobSpells).
 They are optional and independent of the Linux client: they apply to the Interface folder on any platform.
 Close the game before copying.
 
@@ -99,6 +99,32 @@ Close the game before copying.
    show abilities". Pressing or releasing Alt rebuilds the open unit tooltip. The addon's options are unchanged.
    Status: the logic was tested outside the game with stand-in functions; not yet looked at in play.
 
+12. Questie-335, Modules/Libs/ThreadLib.lua: available-quest icons gone until a UI reload
+   Symptom: the "!" icons for available quests disappear (seen after opening the big map) and stay gone until /reload.
+   Cause: AvailableQuests runs its icon calculation in a ThreadLib thread and keeps a "thread running" flag that only the
+   thread's completion callback clears. When the thread raised an error, ThreadLib cancelled its timer without calling
+   the callback, so the flag stayed set: every later refresh (including the server bridge's reset) queued behind the dead
+   thread and nothing was drawn again. The error itself was not captured (the player had Lua errors hidden), so this
+   fixes the lock-up, not whatever raises the error; if it recurs the error now shows up in chat as a Questie [ERROR].
+   Fix: ThreadLib also calls the completion callback (under pcall) when the thread fails.
+   Status: found by reading the code; not reproduced and not yet tested in play.
+
+13. NPCBotPaperdoll, NPCBotPaperdoll.lua: bot equipment refreshes by itself when a bot joins the party
+   Symptom: after summoning or inviting bots (or after alt bots rejoin at login), bag tooltips showed no bot upgrade line
+   until the Bot Roster was opened and Refresh pressed for each bot.
+   Cause: the paperdoll only requested equipment on a manual Refresh (and once at login, before the bots have joined).
+   Fix: when the group gains a member the addon waits 3 seconds for the group to settle, then runs the same full
+   sync as the roster's sync-all button (at most one automatic sync per 15 seconds, postponed while in combat).
+   Status: the timing logic was tested outside the game with stand-in functions; not yet seen in play.
+
+14. Questie-335, Compat/Compat.lua (second change in the same file): world map icons stay gone after an internal error
+   Symptom: after opening the big map the quest icons never came back on it until /reload.
+   Cause: while the world map is open, Questie reads the player position through an "internal map read" that raises a
+   depth counter and lowers it afterwards. If anything in between raised an error the counter stayed up for the rest of
+   the session, and the world map update (HBD) returns early whenever the counter is up, so it was never redrawn.
+   Fix: the read runs under pcall and the counter is always lowered.
+   Status: found by reading the code; not reproduced and not yet tested in play.
+
 Credit: the Questie map-icon fixes (items 4b and 4c, 5, 6 and 7) are by Grandpa_Boris.
 
 Install
@@ -108,7 +134,7 @@ up under FTA-Linux/addon-fix-backup/ and applies the fixes: a file is replaced o
 fixes were made for, otherwise the patch is applied if it fits (needs the "patch" tool), otherwise the file is left
 alone. Use --no-fixes to skip it, or --fixes PATH to point at a fixes folder.
 
-Option A, replace the twelve files by hand. These are complete copies of the files as shipped in the base client, so
+Option A, replace the thirteen files by hand. These are complete copies of the files as shipped in the base client, so
 only use this if your ElvUI is 6.09 and your Questie-335 and AshenBotUpgrade match the base client. Copy the Interface folder from
 this archive over the Interface folder of your client folder (the one that holds Wow64 and Data).
 

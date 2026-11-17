@@ -6,7 +6,7 @@
 #   FTA-Linux/optional.sh remove ID        take the piece out of the client; later updates leave it out
 #   FTA-Linux/optional.sh restore ID       bring a piece back that was taken out here (offline)
 #
-# Pieces (ID): murloc, realmdesk, bodyshape, clickguard, fixes, texture. Nothing is deleted. Whatever is taken out is moved to
+# Pieces (ID): murloc, housing, realmdesk, bodyshape, clickguard, fixes, texture. Nothing is deleted. Whatever is taken out is moved to
 # FTA-Linux/removed/<date-time>/ (or into $FTA_REMOVED_DIR when that is set, which uninstall.sh does), so it can be
 # put back or deleted by hand. States: installed, removed (taken out here or opted out; the installer will not add it
 # again by itself), absent (never added).
@@ -26,6 +26,7 @@ fail() { printf 'optional: %s\n' "$*" >&2; exit 1; }
 title() {
     case $1 in
         murloc)   printf 'Murloc race' ;;
+        housing)  printf 'Housing pack' ;;
         realmdesk) printf 'RealmDesk tickets' ;;
         bodyshape) printf 'Body Shape sliders' ;;
         clickguard) printf 'Bot Click Guard' ;;
@@ -37,6 +38,7 @@ title() {
 describe() {
     case $1 in
         murloc)   printf 'The Murloc playable race of the From The Ashes realm (Data/patch-ZD.mpq, 13 MB). Only useful on that realm.' ;;
+        housing)  printf 'Art for player housing on the From The Ashes realm: five archives (Data/patch-ZE to patch-ZI, 760 MB) and a texture list. Only useful on that realm. Add it with FTA-Linux-Installer.run --housing.' ;;
         realmdesk) printf 'The in-game support ticket window (/desk). Does nothing unless the realm has its server side switched on.' ;;
         bodyshape) printf 'Character build sliders (/bs): height, build, face, and for female characters breast and butt. Your settings in WTF are kept.' ;;
         clickguard) printf 'NetherBot Click Guard (/nbcg): your NPCBots stop catching right-clicks meant for the world; hold a key to click one. Click-through needs this client build.' ;;
@@ -51,6 +53,10 @@ state() { # state ID: installed | removed | absent
         murloc)
             [[ -f $client/Data/patch-ZD.mpq ]] && { printf installed; return; }
             [[ -f $state_dir/no-murloc ]] && { printf removed; return; }
+            printf absent ;;
+        housing)
+            housing_present && { printf installed; return; }
+            [[ -f $state_dir/no-housing ]] && { printf removed; return; }
             printf absent ;;
         realmdesk)
             [[ -f $client/Interface/AddOns/RealmDesk/RealmDesk.toc ]] && { printf installed; return; }
@@ -74,7 +80,9 @@ state() { # state ID: installed | removed | absent
     esac
 }
 
-ids="murloc realmdesk bodyshape clickguard fixes texture"
+housing_files="Data/patch-ZE.mpq Data/patch-ZF.mpq Data/patch-ZG.mpq Data/patch-ZH.mpq Data/patch-ZI.mpq Utils/WarcraftXL/FileDataID.extra.csv"
+housing_present() { local f; for f in $housing_files; do [[ -f $client/$f ]] || return 1; done; return 0; }
+ids="murloc housing realmdesk bodyshape clickguard fixes texture"
 valid() { case " $ids " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 
 game_running() { pgrep -x Wow64 >/dev/null 2>&1; }
@@ -112,6 +120,16 @@ cmd_remove() {
             fi
             : >"$state_dir/no-murloc"
             printf 'Updates will leave the Murloc race out. Existing Murloc characters stay on the realm but cannot be shown without the patch.\n' ;;
+        housing)
+            local f n=0
+            dir=$(new_removed_dir)
+            for f in $housing_files; do
+                [[ -f $client/$f ]] || continue
+                mkdir -p -- "$dir/$(dirname -- "$f")" && mv -- "$client/$f" "$dir/$f" && n=$((n + 1))
+            done
+            if (( n )); then printf 'Moved %d housing file(s) to %s\n' "$n" "$dir"; else printf 'The housing pack is not installed here.\n'; rmdir -- "$dir" 2>/dev/null || true; fi
+            : >"$state_dir/no-housing"
+            printf 'Updates never add the housing pack by themselves.\n' ;;
         realmdesk)
             if [[ -d $client/Interface/AddOns/RealmDesk ]]; then
                 dir=$(new_removed_dir); mv -- "$client/Interface/AddOns/RealmDesk" "$dir/RealmDesk"
@@ -184,6 +202,16 @@ cmd_restore() {
             dir=$(latest_removed_with patch-ZD.mpq) || { printf 'No copy of the Murloc patch is kept here. Run FTA-Linux-Installer.run --murloc to download it.\n'; return 3; }
             mv -- "$dir/patch-ZD.mpq" "$client/Data/patch-ZD.mpq"; rm -f -- "$state_dir/no-murloc"
             printf 'Put Data/patch-ZD.mpq back.\n' ;;
+        housing)
+            housing_present && { printf 'The housing pack is already installed.\n'; return 0; }
+            local f n=0
+            dir=$(latest_removed_with Data/patch-ZE.mpq) || { printf 'No copy of the housing pack is kept here. Run FTA-Linux-Installer.run --housing to download it.\n'; return 3; }
+            for f in $housing_files; do
+                [[ -f $dir/$f ]] || continue
+                mkdir -p -- "$client/$(dirname -- "$f")" && mv -- "$dir/$f" "$client/$f" && n=$((n + 1))
+            done
+            rm -f -- "$state_dir/no-housing"
+            printf 'Put %d housing file(s) back.\n' "$n" ;;
         realmdesk)
             [[ -d $client/Interface/AddOns/RealmDesk ]] && { printf 'RealmDesk is already installed.\n'; return 0; }
             dir=$(latest_removed_with RealmDesk) || { printf 'No copy of RealmDesk is kept here. Run FTA-Linux-Installer.run --realmdesk to add it.\n'; return 3; }
