@@ -6,7 +6,7 @@
 #   FTA-Linux/optional.sh remove ID        take the piece out of the client; later updates leave it out
 #   FTA-Linux/optional.sh restore ID       bring a piece back that was taken out here (offline)
 #
-# Pieces (ID): murloc, realmdesk, bodyshape, fixes, texture. Nothing is deleted. Whatever is taken out is moved to
+# Pieces (ID): murloc, realmdesk, bodyshape, clickguard, fixes, texture. Nothing is deleted. Whatever is taken out is moved to
 # FTA-Linux/removed/<date-time>/ (or into $FTA_REMOVED_DIR when that is set, which uninstall.sh does), so it can be
 # put back or deleted by hand. States: installed, removed (taken out here or opted out; the installer will not add it
 # again by itself), absent (never added).
@@ -28,6 +28,7 @@ title() {
         murloc)   printf 'Murloc race' ;;
         realmdesk) printf 'RealmDesk tickets' ;;
         bodyshape) printf 'Body Shape sliders' ;;
+        clickguard) printf 'Bot Click Guard' ;;
         fixes)    printf 'Addon fixes' ;;
         texture)  printf 'Sharper character skins' ;;
         *) return 1 ;;
@@ -38,6 +39,7 @@ describe() {
         murloc)   printf 'The Murloc playable race of the From The Ashes realm (Data/patch-ZD.mpq, 13 MB). Only useful on that realm.' ;;
         realmdesk) printf 'The in-game support ticket window (/desk). Does nothing unless the realm has its server side switched on.' ;;
         bodyshape) printf 'Character build sliders (/bs): height, build, face, and for female characters breast and butt. Your settings in WTF are kept.' ;;
+        clickguard) printf 'NetherBot Click Guard (/nbcg): your NPCBots stop catching right-clicks meant for the world; hold a key to click one. Click-through needs this client build.' ;;
         fixes)    printf 'Small fixes to a few addons that misbehave on Linux. Taking them out puts your original files back.' ;;
         texture)  printf 'Sets componentTextureLevel 9 in WTF/Config.wtf (512x512 character skins). Costs a little video memory.' ;;
         *) return 1 ;;
@@ -58,6 +60,10 @@ state() { # state ID: installed | removed | absent
             [[ -f $client/Interface/AddOns/WowDecompBodyShape/WowDecompBodyShape.toc ]] && { printf installed; return; }
             [[ -f $state_dir/no-bodyshape ]] && { printf removed; return; }
             printf absent ;;
+        clickguard)
+            [[ -f $client/Interface/AddOns/NetherBotClickGuard/NetherBotClickGuard.toc ]] && { printf installed; return; }
+            [[ -f $state_dir/no-clickguard ]] && { printf removed; return; }
+            printf absent ;;
         fixes)
             [[ -d $state_dir/addon-fix-backup ]] && { printf installed; return; }
             printf absent ;;
@@ -68,7 +74,7 @@ state() { # state ID: installed | removed | absent
     esac
 }
 
-ids="murloc realmdesk bodyshape fixes texture"
+ids="murloc realmdesk bodyshape clickguard fixes texture"
 valid() { case " $ids " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 
 game_running() { pgrep -x Wow64 >/dev/null 2>&1; }
@@ -124,6 +130,15 @@ cmd_remove() {
             fi
             : >"$state_dir/no-bodyshape"
             printf 'Updates will leave Body Shape out.\n' ;;
+        clickguard)
+            if [[ -d $client/Interface/AddOns/NetherBotClickGuard ]]; then
+                dir=$(new_removed_dir); mv -- "$client/Interface/AddOns/NetherBotClickGuard" "$dir/NetherBotClickGuard"
+                printf 'Moved Interface/AddOns/NetherBotClickGuard to %s (your settings stay in WTF)\n' "$dir"
+            else
+                printf 'NetherBot Click Guard is not installed here.\n'
+            fi
+            : >"$state_dir/no-clickguard"
+            printf 'Updates will leave NetherBot Click Guard out.\n' ;;
         fixes)
             [[ -d $state_dir/addon-fix-backup ]] || { printf 'No addon fixes were applied here.\n'; return 0; }
             dir=$(new_removed_dir)
@@ -179,6 +194,11 @@ cmd_restore() {
             dir=$(latest_removed_with WowDecompBodyShape) || { printf 'No copy of Body Shape is kept here. Run FTA-Linux-Installer.run --bodyshape to add it.\n'; return 3; }
             mv -- "$dir/WowDecompBodyShape" "$client/Interface/AddOns/WowDecompBodyShape"; rm -f -- "$state_dir/no-bodyshape"
             printf 'Put Body Shape back.\n' ;;
+        clickguard)
+            [[ -d $client/Interface/AddOns/NetherBotClickGuard ]] && { printf 'NetherBot Click Guard is already installed.\n'; return 0; }
+            dir=$(latest_removed_with NetherBotClickGuard) || { printf 'No copy of NetherBot Click Guard is kept here. Run FTA-Linux-Installer.run --clickguard to add it.\n'; return 3; }
+            mv -- "$dir/NetherBotClickGuard" "$client/Interface/AddOns/NetherBotClickGuard"; rm -f -- "$state_dir/no-clickguard"
+            printf 'Put NetherBot Click Guard back.\n' ;;
         fixes)
             printf 'Addon fixes come with the installer: run FTA-Linux-Installer.run and answer yes to review them.\n'; return 3 ;;
         texture)

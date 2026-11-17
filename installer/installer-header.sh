@@ -24,6 +24,8 @@
 #   --realmdesk      install RealmDesk even if you opted out earlier
 #   --no-bodyshape   do not install the Body Shape addon (/bs sliders), now or in later updates
 #   --bodyshape      install Body Shape even if you opted out earlier
+#   --no-clickguard  do not install the NetherBot Click Guard addon (/nbcg), now or in later updates
+#   --clickguard     install it even if you opted out earlier
 #   --update         for the launcher's Update button: no questions, no sudo, no terminal; keeps the shortcut
 #                    (pointing it at the launcher), applies addon fixes only if they were applied before
 set -euo pipefail
@@ -44,7 +46,7 @@ MURLOC_PATCH_SHA256=df580c5ef1afaa8f31e6c962b0490e04ad8c940e3f6818c6cf9adb51d2fb
 
 self=$(readlink -f -- "$0")
 ORIGINAL_ARGS="$*"
-client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" texture_level=1 realmdesk=auto bodyshape=auto
+client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" texture_level=1 realmdesk=auto bodyshape=auto clickguard=auto
 out_tty=0; [[ -t 1 ]] && out_tty=1   # the log below replaces stdout, so ask now
 while (( $# )); do
     case $1 in
@@ -60,13 +62,15 @@ while (( $# )); do
         --no-realmdesk) realmdesk=no ;;
         --bodyshape) bodyshape=yes ;;
         --no-bodyshape) bodyshape=no ;;
+        --clickguard) clickguard=yes ;;
+        --no-clickguard) clickguard=no ;;
         --murloc) murloc_dl=yes ;;
         --no-murloc) murloc_dl=no ;;
         --murloc-file) murloc_file=${2:?--murloc-file needs a patch-ZD.mpq}; murloc_dl=yes; shift ;;
         --update) update=1; assume=1; interm=1 ;;
         --in-terminal) interm=1 ;;
         --pause) pause=1 ;;
-        --help|-h) sed -n '2,28p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --help|-h) sed -n '2,30p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
     esac
     shift
@@ -87,6 +91,8 @@ if (( ! interm )) && [[ ! -t 0 || ! -t 1 ]]; then
     [[ $realmdesk == no ]] && relaunch+=(--no-realmdesk)
     [[ $bodyshape == yes ]] && relaunch+=(--bodyshape)
     [[ $bodyshape == no ]] && relaunch+=(--no-bodyshape)
+    [[ $clickguard == yes ]] && relaunch+=(--clickguard)
+    [[ $clickguard == no ]] && relaunch+=(--no-clickguard)
     [[ -n $murloc_file ]] && relaunch+=(--murloc-file "$murloc_file")
     [[ -n $fixes_path ]] && relaunch+=(--fixes "$fixes_path")
     [[ -n $client ]] && relaunch+=(--client "$client")
@@ -434,6 +440,46 @@ bodyshape_install() {
     printf 'In game, enable Body Shape in the AddOns list at character selection (a full restart of the game is needed the first time).\n'
 }
 bodyshape_install || printf 'The Body Shape addon could not be set up (the install itself is fine).\n'
+
+# ---- NetherBot Click Guard addon ----------------------------------------------------------------------------
+# NetherBot Click Guard (/nbcg) keeps right-clicks meant for the world from landing on your NPCBots (hold the modifier to click one). The addon travels inside this installer as
+# FTA-Addons/NetherBotClickGuard and is copied to Interface/AddOns/NetherBotClickGuard. The click-through part needs this client build
+# (on any other the addon falls back to closing the bot's menu). Its settings live in WTF (saved variables), so updating just replaces the addon's own
+# files (an older 1.1 that a player copied in by hand is replaced the same way); a replaced file is first kept in FTA-Linux/clickguard-backup/. --no-clickguard skips it and is remembered
+# (FTA-Linux/no-clickguard) so later updates leave it out; --clickguard installs it again.
+clickguard_install() {
+    local src=$tmp/FTA-Addons/NetherBotClickGuard dest=$client/Interface/AddOns/NetherBotClickGuard marker=$client/FTA-Linux/no-clickguard
+    local file rel cur new=0 changed=0 same=0 bk="" version
+    [[ -f $src/NetherBotClickGuard.toc ]] || { printf '\nNetherBot Click Guard addon: not bundled with this installer.\n'; return 0; }
+    if [[ $clickguard == no ]]; then
+        mkdir -p -- "$client/FTA-Linux" && : >"$marker" || true
+        printf '\nNetherBot Click Guard addon: not installed; later updates leave it out too (run with --clickguard to change that).\n'; return 0
+    fi
+    if [[ $clickguard == yes ]]; then rm -f -- "$marker"
+    elif [[ -f $marker ]]; then
+        printf '\nNetherBot Click Guard addon: left out (you opted out earlier). Run the installer by hand with --clickguard to add it.\n'; return 0
+    fi
+    version=$(sed -n 's/^## Version: *//p' "$src/NetherBotClickGuard.toc" | head -n 1 | tr -d '\r')
+    [[ -d $dest ]] || new=1
+    while IFS= read -r -d '' file; do
+        rel=${file#"$src"/}
+        mkdir -p -- "$dest/$(dirname -- "$rel")" || { printf 'Could not write %s.\n' "$dest"; return 0; }
+        cur=$(hash_of "$dest/$rel")
+        if [[ $cur == "$(hash_of "$file")" ]]; then same=$((same + 1)); continue; fi
+        if [[ -f $dest/$rel ]]; then
+            [[ -n $bk ]] || bk=$client/FTA-Linux/clickguard-backup/$(date +%Y%m%d-%H%M%S)
+            mkdir -p -- "$bk/$(dirname -- "$rel")" && cp -p -- "$dest/$rel" "$bk/$rel" || { printf 'Could not back up %s; left unchanged.\n' "$rel"; continue; }
+        fi
+        cp -f -- "$file" "$dest/$rel.new" && mv -f -- "$dest/$rel.new" "$dest/$rel" || { rm -f -- "$dest/$rel.new"; printf 'Could not write %s.\n' "$dest/$rel"; continue; }
+        changed=$((changed + 1))
+    done < <(find "$src" -type f -print0 | sort -z)
+    printf '\nNetherBot Click Guard addon %s: your bots no longer catch right-clicks; hold Shift (default) to click one, /nbcg for options.\n' "${version:-?}"
+    if (( new )); then printf 'Installed NetherBot Click Guard %s (%d files) into Interface/AddOns/NetherBotClickGuard.\n' "${version:-?}" "$changed"
+    else printf 'NetherBot Click Guard updated: %d file(s) replaced, %d already current.\n' "$changed" "$same"; fi
+    [[ -z $bk ]] || printf 'Replaced files kept in %s\n' "$bk"
+    printf 'In game, enable NetherBot Click Guard in the AddOns list at character selection; /reload applies an update. /nbcg lists the options.\n'
+}
+clickguard_install || printf 'The NetherBot Click Guard addon could not be set up (the install itself is fine).\n'
 
 # ---- optional login screens ----------------------------------------------------------------------
 # A separate download (about 207 MB) kept on Google Drive: ten small packs, installed as

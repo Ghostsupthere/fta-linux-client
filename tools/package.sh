@@ -80,6 +80,14 @@ if [[ -d $addons/WowDecompBodyShape ]]; then
 else
     printf 'No Body Shape addon at %s; the installer will not carry it.\n' "$addons"
 fi
+if [[ -d $addons/NetherBotClickGuard ]]; then
+    [[ -f $addons/NetherBotClickGuard/NetherBotClickGuard.toc && -f $addons/NetherBotClickGuard/NetherBotClickGuard.lua ]] || fail "$addons/NetherBotClickGuard is not the NetherBot Click Guard addon"
+    mkdir -p -- "$stage/FTA-Addons"
+    cp -a -- "$addons/NetherBotClickGuard" "$stage/FTA-Addons/NetherBotClickGuard"
+    printf 'Addon bundled: NetherBot Click Guard %s\n' "$(sed -n 's/^## Version: *//p' "$addons/NetherBotClickGuard/NetherBotClickGuard.toc")"
+else
+    printf 'No NetherBot Click Guard addon at %s; the installer will not carry it.\n' "$addons"
+fi
 chmod +x "$stage/install.sh" "$stage/payload/Wow64" "$stage/payload/FTA-Linux/play.sh" "$stage/payload/FTA-Linux/install-deps.sh" \
     "$stage/payload/FTA-Linux/optional.sh" "$stage/payload/FTA-Linux/uninstall.sh"
 if find "$stage" -type l | grep -q .; then fail 'the payload contains symlinks'; fi

@@ -1,0 +1,10 @@
+## Interface: 30300
+## Title: |cff33ccff[NetherBot]|r Click Guard
+## Notes: Right-click passes straight through your NPCBots. Hold the modifier key (default SHIFT) and right-click a bot to interact with it. /nbcg for options.
+## Author: Grandpa_Boris, Ghostsupthere, Claude
+## Version: 1.2
+## SavedVariables: NetherBotClickGuardDB
+## OptionalDeps: NetherBot, NPCBotPaperdoll
+## X-WarcraftXL-Required: 1
+
+NetherBotClickGuard.lua

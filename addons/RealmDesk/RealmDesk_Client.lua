@@ -429,7 +429,7 @@ formTitle:SetPoint("TOPLEFT",20,-20)
 local l1=label(form,"Title",10,"muted") l1:SetPoint("TOPLEFT",20,-58)
 local titleBG,titleEdit=makeInput(form,421,37,false) titleBG:SetPoint("TOPLEFT",20,-76)
 local category="Gameplay"
-local categories={"Gameplay","Quest","Account","Harassment","Bug","Other"}
+local categories={"Gameplay","Quest","Account","Harassment","Bug","Suggestions","Other"}
 local categoryButton,categoryText
 categoryButton,categoryText=makeButton(form,"Category: Gameplay",183,29,function()
     local idx=1 for i,v in ipairs(categories) do if v==category then idx=i end end
@@ -1100,7 +1100,7 @@ end
     end);clear:SetPoint("LEFT",cycleFilter,"RIGHT",10,0)
     local tableHead=skin(CreateFrame("Frame",nil,content),"control")
     tableHead:SetPoint("TOPLEFT",16,-76);tableHead:SetPoint("TOPRIGHT",-34,-76);tableHead:SetHeight(30)
-    local columns={{"Ticket",0.01},{"Subject",0.09},{"Player",0.44},{"Status",0.59},{"Priority",0.73},{"Assigned to",0.83}}
+    local columns={{"Ticket",0.01},{"Subject",0.08},{"Player",0.38},{"Status",0.52},{"Category",0.63},{"Priority",0.76},{"Assigned to",0.86}}
     P.queueHeader=tableHead
     local headings={}
     for i,col in ipairs(columns) do headings[i]=label(tableHead,col[1],11,"muted") end
@@ -1153,7 +1153,7 @@ end
         button.rdTicketRow=i
         button:SetPoint("TOPLEFT",0,-(i-1)*38)
         local cells={}
-        for j=1,6 do cells[j]=label(button,"",j==2 and 12 or 11,j==2 and "accent" or "text");cells[j]:SetHeight(18) end
+        for j=1,7 do cells[j]=label(button,"",j==2 and 12 or 11,j==2 and "accent" or "text");cells[j]:SetHeight(18) end
         P.rows[i]={button=button,cells=cells}
     end
     local navItems={{"Service Tickets","queue"},{"Queue Insights","stats"}}
@@ -1250,7 +1250,7 @@ end
         for i,row in ipairs(P.rows) do
             local data=state.list[i]
             if data then
-                local values={"#"..data.id,data.title,data.player,data.status,data.priority,data.assigned~="" and data.assigned or "Unassigned"}
+                local values={"#"..data.id,data.title,data.player,data.status,data.category or "",data.priority,data.assigned~="" and data.assigned or "Unassigned"}
                 for j,value in ipairs(values) do row.cells[j]:SetText(value or "") end
                 row.cells[4]:SetTextColor(rgb(statusColors[data.status] or t.muted))
                 row.button.rdRole=data.id==state.currentId and "highlight" or (i%2==0 and "back" or "surface")
@@ -2308,7 +2308,14 @@ end)()
         editor:SetMaxLetters(math.max(10000,#text+1));editor:SetText(text)
         window:Show();editor:SetFocus();editor:HighlightText();recolor()
     end
-    for _,key in ipairs({"location","session","account"}) do
+    -- Description export: ticket id, title and category above the full text, so it can be pasted on its own.
+    UI.exportDetails=UI.exportDetails or {}
+    UI.exportDetails.overview=function()
+        local t=state.ticket or {}
+        return "Ticket #"..tostring(t.id or "?").."\nTitle: "..tostring(t.title or "").."\nCategory: "..tostring(t.category or "")..
+            "\n\n"..tostring(t.body or "")
+    end
+    for _,key in ipairs({"overview","location","session","account"}) do
         local selected=key
         local button=makeButton(UI.sections[key],"Copy Details",89,23,function() copyDetails(selected) end)
         button.rdCopySection=key;button:SetPoint("TOPRIGHT",-12,-7)

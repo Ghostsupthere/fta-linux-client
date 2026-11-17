@@ -1,0 +1,41 @@
+NetherBotClickGuard 1.2 - changes (2026-11-14)
+
+New
+- Real click-through for bots. A right-click on a bot is now ignored by the engine's click hit
+  test, so it goes through to the ground or whatever is behind the bot. Holding the modifier key
+  (default SHIFT) when you press the button makes the click behave normally: target, gossip,
+  quest, merchant and the unit menu all open as usual.
+- Needs the FTA client function WXL_SetClickThrough(button, modifier, unit, ...). The addon sends
+  it the bots it recognises (party/raid creatures, target, mouseover) on group changes and twice a
+  second, because alt bots get a new GUID at each summon.
+- /nbcg clickthrough <on|off>   (default on). /nbcg status shows whether the client supports it.
+- Without the client function (stock or Windows client) nothing is lost: the 1.1 behaviour
+  (close the menu/gossip/target the click opened) still runs.
+
+Install: copy this folder into Interface/AddOns, replacing the old one, then /reload.
+Click-through itself also needs the FTA Wow64 build that contains WXL_SetClickThrough.
+
+NetherBotClickGuard 1.1 - changes (2026-11-06)
+
+Fixes
+- Bot gossip/quest/merchant window was not closed when the guard had already cleared
+  the target on the world click. It now also checks the NPC you are talking to ("npc").
+- Bots no longer need to be in NPCBotPaperdoll's roster or marked with /nbcg scan.
+  A party/raid member counts as a bot when its UnitGUID is a creature GUID (starts 0xF).
+  Real players (GUID starts 0x0) are left alone; no /nbcg ignore needed.
+  (UnitIsPlayer cannot be used: the client returns true for every party member.)
+- Hand-edited settings are tidied on load: the modifier accepts any capitalisation and
+  falls back to SHIFT if it is not ALT/SHIFT/CTRL; the guarded button falls back to right.
+- No error if a hook fires before login finishes loading the settings; a damaged
+  whitelist/blacklist in the saved file is repaired.
+- The group check is skipped when you are not in a group (it runs on every tooltip).
+- Comments tidied to match what the addon now does.
+
+New
+- README.md: command list, what the modifier key is, saved-variables settings, troubleshooting.
+- /nbcg party <on|off>   creature party members count as bots (default on)
+- /nbcg trace <on|off>   print what the guard decides on each click
+- /nbcg debug            now shows why a unit counts as a bot, and its GUID
+
+Install: copy this NetherBotClickGuard folder into Interface/AddOns, replacing the old one,
+then /reload. Your saved settings and marks are kept.

@@ -2,7 +2,7 @@
 ## Title: RealmDesk
 ## Notes: In-game support ticket workspace. Requires RealmDesk server scripts for ticket operations.
 ## Author: RealmDesk
-## Version: 0.3.3-staging
+## Version: 0.3.5-staging
 ## Dependencies: AIO_Client
 
 RealmDeskConfig.lua
