@@ -1,4 +1,4 @@
-//! The Extras tab: the optional pieces of the install (the Murloc race patch, the RealmDesk addon, the addon fixes and
+//! The Extras tab: the optional pieces of the install (the Murloc race patch, the RealmDesk and Body Shape addons, the addon fixes and
 //! the character texture setting). The work is done by `FTA-Linux/optional.sh`, the same script a person can run by
 //! hand; this module only asks it for the state of each piece and runs `remove` or `restore` for one of them.
 //! Nothing is ever deleted by it: a piece that is taken out is moved aside by the script.
@@ -7,7 +7,7 @@ use std::path::Path;
 use std::process::Command;
 
 /// The pieces the script knows, in the order the tab shows them. Only these ids are ever passed to it.
-pub const IDS: &[&str] = &["murloc", "realmdesk", "fixes", "texture"];
+pub const IDS: &[&str] = &["murloc", "realmdesk", "bodyshape", "fixes", "texture"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum State {

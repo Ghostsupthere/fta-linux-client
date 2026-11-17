@@ -72,6 +72,14 @@ if [[ -d $addons/RealmDesk ]]; then
 else
     printf 'No RealmDesk addon at %s; the installer will not carry it.\n' "$addons"
 fi
+if [[ -d $addons/WowDecompBodyShape ]]; then
+    [[ -f $addons/WowDecompBodyShape/WowDecompBodyShape.toc && -f $addons/WowDecompBodyShape/WowDecompBodyShape.lua ]] || fail "$addons/WowDecompBodyShape is not the Body Shape addon"
+    mkdir -p -- "$stage/FTA-Addons"
+    cp -a -- "$addons/WowDecompBodyShape" "$stage/FTA-Addons/WowDecompBodyShape"
+    printf 'Addon bundled: Body Shape %s\n' "$(sed -n 's/^## Version: *//p' "$addons/WowDecompBodyShape/WowDecompBodyShape.toc")"
+else
+    printf 'No Body Shape addon at %s; the installer will not carry it.\n' "$addons"
+fi
 chmod +x "$stage/install.sh" "$stage/payload/Wow64" "$stage/payload/FTA-Linux/play.sh" "$stage/payload/FTA-Linux/install-deps.sh" \
     "$stage/payload/FTA-Linux/optional.sh" "$stage/payload/FTA-Linux/uninstall.sh"
 if find "$stage" -type l | grep -q .; then fail 'the payload contains symlinks'; fi

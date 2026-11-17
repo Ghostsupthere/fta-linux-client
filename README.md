@@ -66,13 +66,14 @@ can add the pieces below. Each one can be taken out again, and **nothing is ever
 |---|---|---|---|
 | Murloc race | `Data/patch-ZD.mpq` (13 MB, separate download). Only useful on the From The Ashes realm | Offered, default yes; updates install it unless you opted out | launcher *Extras* tab, or `--no-murloc` |
 | RealmDesk tickets | `Interface/AddOns/RealmDesk`. Does nothing unless the realm has its server side on | Yes, on every install and update unless you opted out | launcher *Extras* tab, or `--no-realmdesk` |
+| Body Shape sliders | `Interface/AddOns/WowDecompBodyShape` (type `/bs` in game). Your slider settings are saved per character in `WTF`, not in the addon | Yes, on every install and update unless you opted out | launcher *Extras* tab, or `--no-bodyshape` |
 | Addon fixes | A few addon files (listed before they change, originals kept in `FTA-Linux/addon-fix-backup/`). Shared with the Windows client in the same folder | Asked first; an update only re-applies them if you accepted before | launcher *Extras* tab, or `--no-fixes` |
 | Sharper character skins | One line in `WTF/Config.wtf` (`componentTextureLevel 9`, a copy of the old file is kept) | Yes, once, unless you opted out | launcher *Extras* tab, or `--no-texture-level` |
 | Login screens | `Data/LoginScreens/` (207 MB, separate download) and a link `Data/patch-ZZ.mpq` | No: asked, default no | the launcher's *Login* tab (*Default*) |
 
 The same switches work from a terminal: `FTA-Linux/optional.sh list`, `FTA-Linux/optional.sh remove murloc`
-(or `realmdesk`, `fixes`, `texture`) and `FTA-Linux/optional.sh restore murloc`. To put back a piece that was never installed or
-was left out at install time, run the installer again with `--murloc`, `--realmdesk`, and so on.
+(or `realmdesk`, `bodyshape`, `fixes`, `texture`) and `FTA-Linux/optional.sh restore murloc`. To put back a piece that was never installed or
+was left out at install time, run the installer again with `--murloc`, `--realmdesk`, `--bodyshape`, and so on.
 
 ### The launcher (Realmgate)
 
@@ -98,7 +99,7 @@ menu, or run `FTA-Linux/launcher.sh` in your client folder. The window can be re
   as *Not installed*). The launcher makes the choice by linking `Data/patch-ZZ.mpq` to the pack; a `patch-ZZ.mpq` of
   your own is never touched, and nothing is changed while the game runs. The packs are built from a client's
   `patch-c.mpq` with `tools/login-packs/` (see the README there).
-- **Extras**: the optional pieces of the install (Murloc race, RealmDesk, addon fixes, sharper character skins), each
+- **Extras**: the optional pieces of the install (Murloc race, RealmDesk, Body Shape, addon fixes, sharper character skins), each
   with a *Take out* or *Put back* button. Taking a piece out moves its files aside and updates leave it out; nothing is
   deleted. Nothing is changed while the game runs. It needs the `FTA-Linux/optional.sh` that came with v0.3.9 and later.
 - **Diagnostics**: checks the system, graphics driver, game files and libraries, shows the report and copies or saves
@@ -226,14 +227,14 @@ The launcher's Settings tab edits the same file for you.
 
 Run `FTA-Linux/uninstall.sh` in a terminal (`--dry-run` shows what it would do, `--yes` skips the question,
 `--purge-settings` also removes the launcher's saved choices). It removes `Wow64`, the `FTA-Linux` folder and the menu
-shortcut, and moves the Murloc patch, RealmDesk, the login screens and the texture line out of your client; your original
+shortcut, and moves the Murloc patch, RealmDesk, Body Shape, the login screens and the texture line out of your client; your original
 addon files come back from the backups. What it moves waits in `FTA-Linux-removed-<date-time>/` next to `Wow.exe`
 (delete that folder when you are sure, or pass `--delete`). It does not touch `WTF` (your settings and saved variables),
 the Windows client, or the offline shader packs in `Utils/WarcraftXL/visuals/`, which are harmless to keep.
 
 By hand: delete `Wow64` and the `FTA-Linux` folder, `~/.local/share/applications/fta-linux-client.desktop` if you added the
 menu shortcut, and `~/.config/fta-linux-launcher/` if you want the launcher's saved choices gone; the pieces in the table
-above stay in your client until you remove them (`Data/patch-ZD.mpq`, `Interface/AddOns/RealmDesk`, and so on).
+above stay in your client until you remove them (`Data/patch-ZD.mpq`, `Interface/AddOns/RealmDesk`, `Interface/AddOns/WowDecompBodyShape`, and so on).
 
 ## Third-party software
 
@@ -258,7 +259,7 @@ the words after the colon become the subtitle. Keep each paragraph under about 2
 | `installer/installer-header.sh` | The one-click installer's script part (the payload is appended at build time) |
 | `tools/package.sh` | Builds the release files from a payload |
 | `tools/make-addon-fixes.sh` | Builds the addon-fixes folder (`fixes.manifest`, patches, fixed files) that `package.sh` bundles into the installer |
-| `addons/` | Addons the installer copies into the client (`addons/RealmDesk`); `tools/update-realmdesk.sh` refreshes it from a player ZIP, `package.sh` bundles it |
+| `addons/` | Addons the installer copies into the client (`addons/RealmDesk`, `addons/WowDecompBodyShape`); `tools/update-realmdesk.sh` refreshes RealmDesk from a player ZIP, `package.sh` bundles both |
 | `launcher/` | The launcher (Rust and Slint): update check, Play, game and WarcraftXL settings, diagnostics. `ui/main.slint` is the whole interface (design tokens at the top); `src/` the logic |
 | `launcher/assets/` | Fonts, artwork and the small scripts that build the pictures from it: `make-background.py` (scene and backdrops), `make-portal.py` (the animated portal), `make-frame.py` (the metal frame), `make-icons.py`, `make-effects.py` |
 | `tools/build-launcher.sh` | Builds the launcher against the game's glibc (needs Nix) |

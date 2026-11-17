@@ -6,7 +6,7 @@
 #   FTA-Linux/optional.sh remove ID        take the piece out of the client; later updates leave it out
 #   FTA-Linux/optional.sh restore ID       bring a piece back that was taken out here (offline)
 #
-# Pieces (ID): murloc, realmdesk, fixes, texture. Nothing is deleted. Whatever is taken out is moved to
+# Pieces (ID): murloc, realmdesk, bodyshape, fixes, texture. Nothing is deleted. Whatever is taken out is moved to
 # FTA-Linux/removed/<date-time>/ (or into $FTA_REMOVED_DIR when that is set, which uninstall.sh does), so it can be
 # put back or deleted by hand. States: installed, removed (taken out here or opted out; the installer will not add it
 # again by itself), absent (never added).
@@ -27,6 +27,7 @@ title() {
     case $1 in
         murloc)   printf 'Murloc race' ;;
         realmdesk) printf 'RealmDesk tickets' ;;
+        bodyshape) printf 'Body Shape sliders' ;;
         fixes)    printf 'Addon fixes' ;;
         texture)  printf 'Sharper character skins' ;;
         *) return 1 ;;
@@ -36,6 +37,7 @@ describe() {
     case $1 in
         murloc)   printf 'The Murloc playable race of the From The Ashes realm (Data/patch-ZD.mpq, 13 MB). Only useful on that realm.' ;;
         realmdesk) printf 'The in-game support ticket window (/desk). Does nothing unless the realm has its server side switched on.' ;;
+        bodyshape) printf 'Character build sliders (/bs): height, build, face, and for female characters breast and butt. Your settings in WTF are kept.' ;;
         fixes)    printf 'Small fixes to a few addons that misbehave on Linux. Taking them out puts your original files back.' ;;
         texture)  printf 'Sets componentTextureLevel 9 in WTF/Config.wtf (512x512 character skins). Costs a little video memory.' ;;
         *) return 1 ;;
@@ -52,6 +54,10 @@ state() { # state ID: installed | removed | absent
             [[ -f $client/Interface/AddOns/RealmDesk/RealmDesk.toc ]] && { printf installed; return; }
             [[ -f $state_dir/no-realmdesk ]] && { printf removed; return; }
             printf absent ;;
+        bodyshape)
+            [[ -f $client/Interface/AddOns/WowDecompBodyShape/WowDecompBodyShape.toc ]] && { printf installed; return; }
+            [[ -f $state_dir/no-bodyshape ]] && { printf removed; return; }
+            printf absent ;;
         fixes)
             [[ -d $state_dir/addon-fix-backup ]] && { printf installed; return; }
             printf absent ;;
@@ -62,7 +68,7 @@ state() { # state ID: installed | removed | absent
     esac
 }
 
-ids="murloc realmdesk fixes texture"
+ids="murloc realmdesk bodyshape fixes texture"
 valid() { case " $ids " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 
 game_running() { pgrep -x Wow64 >/dev/null 2>&1; }
@@ -109,6 +115,15 @@ cmd_remove() {
             fi
             : >"$state_dir/no-realmdesk"
             printf 'Updates will leave RealmDesk out.\n' ;;
+        bodyshape)
+            if [[ -d $client/Interface/AddOns/WowDecompBodyShape ]]; then
+                dir=$(new_removed_dir); mv -- "$client/Interface/AddOns/WowDecompBodyShape" "$dir/WowDecompBodyShape"
+                printf 'Moved Interface/AddOns/WowDecompBodyShape to %s (your slider settings stay in WTF)\n' "$dir"
+            else
+                printf 'Body Shape is not installed here.\n'
+            fi
+            : >"$state_dir/no-bodyshape"
+            printf 'Updates will leave Body Shape out.\n' ;;
         fixes)
             [[ -d $state_dir/addon-fix-backup ]] || { printf 'No addon fixes were applied here.\n'; return 0; }
             dir=$(new_removed_dir)
@@ -159,6 +174,11 @@ cmd_restore() {
             dir=$(latest_removed_with RealmDesk) || { printf 'No copy of RealmDesk is kept here. Run FTA-Linux-Installer.run --realmdesk to add it.\n'; return 3; }
             mv -- "$dir/RealmDesk" "$client/Interface/AddOns/RealmDesk"; rm -f -- "$state_dir/no-realmdesk"
             printf 'Put RealmDesk back.\n' ;;
+        bodyshape)
+            [[ -d $client/Interface/AddOns/WowDecompBodyShape ]] && { printf 'Body Shape is already installed.\n'; return 0; }
+            dir=$(latest_removed_with WowDecompBodyShape) || { printf 'No copy of Body Shape is kept here. Run FTA-Linux-Installer.run --bodyshape to add it.\n'; return 3; }
+            mv -- "$dir/WowDecompBodyShape" "$client/Interface/AddOns/WowDecompBodyShape"; rm -f -- "$state_dir/no-bodyshape"
+            printf 'Put Body Shape back.\n' ;;
         fixes)
             printf 'Addon fixes come with the installer: run FTA-Linux-Installer.run and answer yes to review them.\n'; return 3 ;;
         texture)
