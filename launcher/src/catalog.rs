@@ -92,6 +92,7 @@ pub const SETTINGS: &[Setting] = &[
     s("scriptProfile", Wtf, DEBUG_CATEGORY, "Addon CPU profiling", "Lets addons measure their own CPU use; slows the UI a little (game setting)", false),
     dbg("WXL_PARTICLE_GRAVITY_FLIP", "Test: flip retail particle gravity", "Torch flames from retail models point down? Try this. Reverses the sign of the converted gravity of retail effects", "1", "0"),
     dbg("WXL_PARTICLE_SPEED_FLIP", "Test: flip retail particle direction", "Torch flames from retail models point down? Try this. Reverses the emission direction of retail effects (may break smoke and sparks)", "1", "0"),
+    dbg("WXL_WMO_MOCV_SCALE", "Test: dim retail building vertex colours", "Retail houses too bright? Multiplies the vertex colours of outdoor building groups by 0.5 (try this when houses look flat and overexposed)", "0.5", "1"),
     dbg("WXL_NATIVE_DIAGNOSTICS", "Asset and equipment trace", "Logs model, texture and equipment path decisions to the launch log", "1", "0"),
     dbg("WXL_PROFILE_LOG", "Profiler summary every 5 seconds", "Logs frame time and timings per zone (water, particles, weather, ...) to the launch log", "5", "0"),
     dbg("WXL_FOG_TRACE", "Fog and light pass trace", "Logs the state of the fog and light passes every 300 frames", "1", "0"),
