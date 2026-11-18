@@ -90,6 +90,8 @@ pub const SETTINGS: &[Setting] = &[
     // ---- Debugging: for finding problems; they write extra log lines or show errors, and cost some speed ----
     s("scriptErrors", Wtf, DEBUG_CATEGORY, "Show Lua errors", "Addon errors pop up in the game instead of staying silent (game setting)", false),
     s("scriptProfile", Wtf, DEBUG_CATEGORY, "Addon CPU profiling", "Lets addons measure their own CPU use; slows the UI a little (game setting)", false),
+    dbg("WXL_PARTICLE_GRAVITY_FLIP", "Test: flip retail particle gravity", "Torch flames from retail models point down? Try this. Reverses the sign of the converted gravity of retail effects", "1", "0"),
+    dbg("WXL_PARTICLE_SPEED_FLIP", "Test: flip retail particle direction", "Torch flames from retail models point down? Try this. Reverses the emission direction of retail effects (may break smoke and sparks)", "1", "0"),
     dbg("WXL_NATIVE_DIAGNOSTICS", "Asset and equipment trace", "Logs model, texture and equipment path decisions to the launch log", "1", "0"),
     dbg("WXL_PROFILE_LOG", "Profiler summary every 5 seconds", "Logs frame time and timings per zone (water, particles, weather, ...) to the launch log", "5", "0"),
     dbg("WXL_FOG_TRACE", "Fog and light pass trace", "Logs the state of the fog and light passes every 300 frames", "1", "0"),
