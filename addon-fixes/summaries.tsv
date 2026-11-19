@@ -11,3 +11,4 @@ Interface/AddOns/Questie-335/Modules/QuestiePlayer.lua	Questie: a Murloc gets th
 Interface/AddOns/Questie-335/Modules/Quest/QuestEventHandler.lua	Questie: no Lua error when a quest is removed right after it was accepted
 Interface/AddOns/MobSpells/core.lua	MobSpells: mob abilities in the tooltip only show while Alt is held
 Interface/AddOns/Questie-335/Modules/Libs/ThreadLib.lua	Questie: available-quest icons no longer stay gone until a UI reload after an internal error
+Interface/AddOns/Questie-335/Database/Zones/zoneTables.lua	Questie: quests with an objective on a whole-continent map no longer raise an error

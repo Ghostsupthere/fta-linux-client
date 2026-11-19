@@ -1,8 +1,8 @@
 FTA addon fixes
 ===============
 
-Thirteen small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
-seven in Questie-335, one in NPCBotPaperdoll, one in MobSpells).
+Fourteen small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
+eight in Questie-335, one in NPCBotPaperdoll, one in MobSpells).
 They are optional and independent of the Linux client: they apply to the Interface folder on any platform.
 Close the game before copying.
 
@@ -125,6 +125,15 @@ Close the game before copying.
    Fix: the read runs under pcall and the counter is always lowered.
    Status: found by reading the code; not reproduced and not yet tested in play.
 
+15. Questie-335, Database/Zones/zoneTables.lua: quest objectives on a whole-continent map raised an error
+   Symptom: "No UiMapID or fitting parentAreaId for areaId : 10074 - Matrix Punchograph 3005-A" (quest Data Rescue), logged
+   as "[ERROR] [QuestieQuest]: [SpecialObjectives] There was an error populating objectives", and that objective had no
+   map icon. Player ticket #8.
+   Cause: thirteen of Questie's data corrections place an object or NPC on a fake zone id that stands for a continent
+   (10073 Kalimdor, 10074 Eastern Kingdoms, 10089 Azeroth), and the zone table had no map for those ids.
+   Fix: the three ids are mapped to the continent maps the compat layer already has (1414, 1415, 947).
+   Status: found by reading the code; the files load under Lua 5.1; not yet tested in play (check the Data Rescue objective).
+
 Credit: the Questie map-icon fixes (items 4b and 4c, 5, 6 and 7) are by Grandpa_Boris.
 
 Install
@@ -134,7 +143,7 @@ up under FTA-Linux/addon-fix-backup/ and applies the fixes: a file is replaced o
 fixes were made for, otherwise the patch is applied if it fits (needs the "patch" tool), otherwise the file is left
 alone. Use --no-fixes to skip it, or --fixes PATH to point at a fixes folder.
 
-Option A, replace the thirteen files by hand. These are complete copies of the files as shipped in the base client, so
+Option A, replace the fourteen files by hand. These are complete copies of the files as shipped in the base client, so
 only use this if your ElvUI is 6.09 and your Questie-335 and AshenBotUpgrade match the base client. Copy the Interface folder from
 this archive over the Interface folder of your client folder (the one that holds Wow64 and Data).
 
