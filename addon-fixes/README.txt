@@ -1,9 +1,9 @@
 FTA addon fixes
 ===============
 
-Twelve small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
-six in Questie-335, one in NPCBotPaperdoll, one in MobSpells), one change to the old ncBiggerMacros addon, and the new
-macro window (three files that the base client does not have as separate files: item 12).
+Fourteen small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
+eight in Questie-335, one in NPCBotPaperdoll, one in MobSpells), one change to the old ncBiggerMacros addon, and the new
+macro window (three files that the base client does not have as separate files: item 16).
 They are optional and apply to the Interface folder on any platform; the macro window's long macros need a Linux
 client that has native macros (it falls back to the normal 255-character window on any other client).
 Close the game before copying.
@@ -101,7 +101,42 @@ Close the game before copying.
    show abilities". Pressing or releasing Alt rebuilds the open unit tooltip. The addon's options are unchanged.
    Status: the logic was tested outside the game with stand-in functions; not yet looked at in play.
 
-12. Macro window (new files) and ncBiggerMacros: long macros
+12. Questie-335, Modules/Libs/ThreadLib.lua: available-quest icons gone until a UI reload
+   Symptom: the "!" icons for available quests disappear (seen after opening the big map) and stay gone until /reload.
+   Cause: AvailableQuests runs its icon calculation in a ThreadLib thread and keeps a "thread running" flag that only the
+   thread's completion callback clears. When the thread raised an error, ThreadLib cancelled its timer without calling
+   the callback, so the flag stayed set: every later refresh (including the server bridge's reset) queued behind the dead
+   thread and nothing was drawn again. The error itself was not captured (the player had Lua errors hidden), so this
+   fixes the lock-up, not whatever raises the error; if it recurs the error now shows up in chat as a Questie [ERROR].
+   Fix: ThreadLib also calls the completion callback (under pcall) when the thread fails.
+   Status: found by reading the code; not reproduced and not yet tested in play.
+
+13. NPCBotPaperdoll, NPCBotPaperdoll.lua: bot equipment refreshes by itself when a bot joins the party
+   Symptom: after summoning or inviting bots (or after alt bots rejoin at login), bag tooltips showed no bot upgrade line
+   until the Bot Roster was opened and Refresh pressed for each bot.
+   Cause: the paperdoll only requested equipment on a manual Refresh (and once at login, before the bots have joined).
+   Fix: when the group gains a member the addon waits 3 seconds for the group to settle, then runs the same full
+   sync as the roster's sync-all button (at most one automatic sync per 15 seconds, postponed while in combat).
+   Status: the timing logic was tested outside the game with stand-in functions; not yet seen in play.
+
+14. Questie-335, Compat/Compat.lua (second change in the same file): world map icons stay gone after an internal error
+   Symptom: after opening the big map the quest icons never came back on it until /reload.
+   Cause: while the world map is open, Questie reads the player position through an "internal map read" that raises a
+   depth counter and lowers it afterwards. If anything in between raised an error the counter stayed up for the rest of
+   the session, and the world map update (HBD) returns early whenever the counter is up, so it was never redrawn.
+   Fix: the read runs under pcall and the counter is always lowered.
+   Status: found by reading the code; not reproduced and not yet tested in play.
+
+15. Questie-335, Database/Zones/zoneTables.lua: quest objectives on a whole-continent map raised an error
+   Symptom: "No UiMapID or fitting parentAreaId for areaId : 10074 - Matrix Punchograph 3005-A" (quest Data Rescue), logged
+   as "[ERROR] [QuestieQuest]: [SpecialObjectives] There was an error populating objectives", and that objective had no
+   map icon. Player ticket #8.
+   Cause: thirteen of Questie's data corrections place an object or NPC on a fake zone id that stands for a continent
+   (10073 Kalimdor, 10074 Eastern Kingdoms, 10089 Azeroth), and the zone table had no map for those ids.
+   Fix: the three ids are mapped to the continent maps the compat layer already has (1414, 1415, 947).
+   Status: found by reading the code; the files load under Lua 5.1; not yet tested in play (check the Data Rescue objective).
+
+16. Macro window (new files) and ncBiggerMacros: long macros
    Needs a client with native macros (the Linux client from the release that carries this bundle).
    What it adds: Interface/AddOns/Blizzard_MacroUI/Blizzard_MacroUI.lua, Blizzard_MacroUI.xml and FTA_MacroEditor.lua.
    They replace the macro window with one that keeps macros up to 2048 characters (the normal limit is 255), shows a
@@ -127,7 +162,7 @@ up under FTA-Linux/addon-fix-backup/ and applies the fixes: a file is replaced o
 fixes were made for, otherwise the patch is applied if it fits (needs the "patch" tool), otherwise the file is left
 alone. Use --no-fixes to skip it, or --fixes PATH to point at a fixes folder.
 
-Option A, replace the files by hand (items 1-11 and ncBiggerMacros; item 12's three new files are simply copied in). These are complete copies of the files as shipped in the base client, so
+Option A, replace the files by hand (items 1-15 and ncBiggerMacros; item 16's three new files are simply copied in). These are complete copies of the files as shipped in the base client, so
 only use this if your ElvUI is 6.09 and your Questie-335 and AshenBotUpgrade match the base client. Copy the Interface folder from
 this archive over the Interface folder of your client folder (the one that holds Wow64 and Data).
 
@@ -140,7 +175,7 @@ client folder:
 Then /reload in game, or restart the client.
 
 Undo: patch -R -p1 with the same patch files (after Option B), or restore your backup (the installer keeps
-one in FTA-Linux/addon-fix-backup/). The files item 12 added are listed in FTA-Linux/addon-fix-new-files.txt; delete
+one in FTA-Linux/addon-fix-backup/). The files item 16 added are listed in FTA-Linux/addon-fix-new-files.txt; delete
 them (or use the launcher's Extras tab, "Addon fixes", which takes them out and puts the originals back).
 
 ElvUI and Questie keep their own licenses. These changes are offered under the same terms as the files they
