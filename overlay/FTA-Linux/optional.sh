@@ -6,7 +6,7 @@
 #   FTA-Linux/optional.sh remove ID        take the piece out of the client; later updates leave it out
 #   FTA-Linux/optional.sh restore ID       bring a piece back that was taken out here (offline)
 #
-# Pieces (ID): murloc, realmdesk, bodyshape, clickguard, fixes, texture. Nothing is deleted. Whatever is taken out is moved to
+# Pieces (ID): murloc, realmdesk, bodyshape, clickguard, modelfix, fixes, texture. Nothing is deleted. Whatever is taken out is moved to
 # FTA-Linux/removed/<date-time>/ (or into $FTA_REMOVED_DIR when that is set, which uninstall.sh does), so it can be
 # put back or deleted by hand. States: installed, removed (taken out here or opted out; the installer will not add it
 # again by itself), absent (never added).
@@ -29,6 +29,7 @@ title() {
         realmdesk) printf 'RealmDesk tickets' ;;
         bodyshape) printf 'Body Shape sliders' ;;
         clickguard) printf 'Bot Click Guard' ;;
+        modelfix) printf 'Model bounds fix' ;;
         fixes)    printf 'Addon fixes' ;;
         texture)  printf 'Sharper character skins' ;;
         *) return 1 ;;
@@ -40,6 +41,7 @@ describe() {
         realmdesk) printf 'The in-game support ticket window (/desk). Does nothing unless the realm has its server side switched on.' ;;
         bodyshape) printf 'Character build sliders (/bs): height, build, face, and for female characters breast and butt. Your settings in WTF are kept.' ;;
         clickguard) printf 'NetherBot Click Guard (/nbcg): your NPCBots stop catching right-clicks meant for the world; hold a key to click one. Click-through needs this client build.' ;;
+        modelfix) printf 'Corrects the animation bounds of 17 HD world models (Data/patch-YF.mpq, 0.9 MB) that the game could not click or kept hiding, such as the Heartswood quest tree. Changes nothing else.' ;;
         fixes)    printf 'Small fixes to a few addons that misbehave on Linux. Taking them out puts your original files back.' ;;
         texture)  printf 'Sets componentTextureLevel 9 in WTF/Config.wtf (512x512 character skins). Costs a little video memory.' ;;
         *) return 1 ;;
@@ -64,6 +66,10 @@ state() { # state ID: installed | removed | absent
             [[ -f $client/Interface/AddOns/NetherBotClickGuard/NetherBotClickGuard.toc ]] && { printf installed; return; }
             [[ -f $state_dir/no-clickguard ]] && { printf removed; return; }
             printf absent ;;
+        modelfix)
+            [[ -f $client/Data/patch-YF.mpq ]] && { printf installed; return; }
+            [[ -f $state_dir/no-modelfix ]] && { printf removed; return; }
+            printf absent ;;
         fixes)
             [[ -d $state_dir/addon-fix-backup ]] && { printf installed; return; }
             printf absent ;;
@@ -74,7 +80,7 @@ state() { # state ID: installed | removed | absent
     esac
 }
 
-ids="murloc realmdesk bodyshape clickguard fixes texture"
+ids="murloc realmdesk bodyshape clickguard modelfix fixes texture"
 valid() { case " $ids " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 
 game_running() { pgrep -x Wow64 >/dev/null 2>&1; }
@@ -139,6 +145,15 @@ cmd_remove() {
             fi
             : >"$state_dir/no-clickguard"
             printf 'Updates will leave NetherBot Click Guard out.\n' ;;
+        modelfix)
+            if [[ -f $client/Data/patch-YF.mpq ]]; then
+                dir=$(new_removed_dir); mv -- "$client/Data/patch-YF.mpq" "$dir/patch-YF.mpq"
+                printf 'Moved Data/patch-YF.mpq to %s\n' "$dir"
+            else
+                printf 'The model bounds fix is not installed here.\n'
+            fi
+            : >"$state_dir/no-modelfix"
+            printf 'Updates will leave it out. The HD tree, tents and the rest of the 17 models go back to their broken bounds (some cannot be clicked).\n' ;;
         fixes)
             [[ -d $state_dir/addon-fix-backup ]] || { printf 'No addon fixes were applied here.\n'; return 0; }
             dir=$(new_removed_dir)
@@ -199,6 +214,11 @@ cmd_restore() {
             dir=$(latest_removed_with NetherBotClickGuard) || { printf 'No copy of NetherBot Click Guard is kept here. Run FTA-Linux-Installer.run --clickguard to add it.\n'; return 3; }
             mv -- "$dir/NetherBotClickGuard" "$client/Interface/AddOns/NetherBotClickGuard"; rm -f -- "$state_dir/no-clickguard"
             printf 'Put NetherBot Click Guard back.\n' ;;
+        modelfix)
+            [[ -f $client/Data/patch-YF.mpq ]] && { printf 'The model bounds fix is already installed.\n'; return 0; }
+            dir=$(latest_removed_with patch-YF.mpq) || { printf 'No copy of the model bounds fix is kept here. Run FTA-Linux-Installer.run --modelfix to add it.\n'; return 3; }
+            mv -- "$dir/patch-YF.mpq" "$client/Data/patch-YF.mpq"; rm -f -- "$state_dir/no-modelfix"
+            printf 'Put Data/patch-YF.mpq back.\n' ;;
         fixes)
             printf 'Addon fixes come with the installer: run FTA-Linux-Installer.run and answer yes to review them.\n'; return 3 ;;
         texture)

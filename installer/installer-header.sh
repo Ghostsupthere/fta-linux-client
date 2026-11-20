@@ -26,6 +26,8 @@
 #   --bodyshape      install Body Shape even if you opted out earlier
 #   --no-clickguard  do not install the NetherBot Click Guard addon (/nbcg), now or in later updates
 #   --clickguard     install it even if you opted out earlier
+#   --no-modelfix    do not install the model bounds fix (Data/patch-YF.mpq), now or in later updates
+#   --modelfix       install it even if you opted out earlier
 #   --update         for the launcher's Update button: no questions, no sudo, no terminal; keeps the shortcut
 #                    (pointing it at the launcher), applies addon fixes only if they were applied before
 set -euo pipefail
@@ -46,7 +48,7 @@ MURLOC_PATCH_SHA256=df580c5ef1afaa8f31e6c962b0490e04ad8c940e3f6818c6cf9adb51d2fb
 
 self=$(readlink -f -- "$0")
 ORIGINAL_ARGS="$*"
-client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" texture_level=1 realmdesk=auto bodyshape=auto clickguard=auto
+client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" texture_level=1 realmdesk=auto bodyshape=auto clickguard=auto modelfix=auto
 out_tty=0; [[ -t 1 ]] && out_tty=1   # the log below replaces stdout, so ask now
 while (( $# )); do
     case $1 in
@@ -64,6 +66,8 @@ while (( $# )); do
         --no-bodyshape) bodyshape=no ;;
         --clickguard) clickguard=yes ;;
         --no-clickguard) clickguard=no ;;
+        --modelfix) modelfix=yes ;;
+        --no-modelfix) modelfix=no ;;
         --murloc) murloc_dl=yes ;;
         --no-murloc) murloc_dl=no ;;
         --murloc-file) murloc_file=${2:?--murloc-file needs a patch-ZD.mpq}; murloc_dl=yes; shift ;;
@@ -93,6 +97,8 @@ if (( ! interm )) && [[ ! -t 0 || ! -t 1 ]]; then
     [[ $bodyshape == no ]] && relaunch+=(--no-bodyshape)
     [[ $clickguard == yes ]] && relaunch+=(--clickguard)
     [[ $clickguard == no ]] && relaunch+=(--no-clickguard)
+    [[ $modelfix == yes ]] && relaunch+=(--modelfix)
+    [[ $modelfix == no ]] && relaunch+=(--no-modelfix)
     [[ -n $murloc_file ]] && relaunch+=(--murloc-file "$murloc_file")
     [[ -n $fixes_path ]] && relaunch+=(--fixes "$fixes_path")
     [[ -n $client ]] && relaunch+=(--client "$client")
@@ -480,6 +486,33 @@ clickguard_install() {
     printf 'In game, enable NetherBot Click Guard in the AddOns list at character selection; /reload applies an update. /nbcg lists the options.\n'
 }
 clickguard_install || printf 'The NetherBot Click Guard addon could not be set up (the install itself is fine).\n'
+
+# ---- model bounds fix --------------------------------------------------------------------------------------------
+# One file, Data/patch-YF.mpq (about 0.9 MB): the base client's Patch-YD.mpq has HD copies of a few world models (the Heartswood quest tree, a campfire, tents,
+# fallen trees ... 17 in all) whose animation bounds are corrupt, so the game culls them from low camera angles and cannot pick them with the mouse (a quest
+# tree that cannot be clicked). The pack only rewrites those bounds; it changes nothing else in the models. It travels inside this installer as FTA-Data/patch-YF.mpq.
+# A different patch-YF.mpq that is already there is kept in FTA-Linux/modelfix-backup/. --no-modelfix skips it and is remembered (FTA-Linux/no-modelfix) so later updates
+# leave it out; --modelfix installs it again. To remove it from this client, delete Data/patch-YF.mpq. Nothing here can make the install fail.
+modelfix_install() {
+    local src=$tmp/FTA-Data/patch-YF.mpq dest=$client/Data/patch-YF.mpq marker=$client/FTA-Linux/no-modelfix bk
+    [[ -f $src ]] || { printf '\nModel bounds fix: not bundled with this installer.\n'; return 0; }
+    if [[ $modelfix == no ]]; then
+        mkdir -p -- "$client/FTA-Linux" && : >"$marker" || true
+        printf '\nModel bounds fix: not installed; later updates leave it out too (run with --modelfix to change that).\n'; return 0
+    fi
+    if [[ $modelfix == yes ]]; then rm -f -- "$marker"
+    elif [[ -f $marker ]]; then
+        printf '\nModel bounds fix: left out (you opted out earlier). Run the installer by hand with --modelfix to add it.\n'; return 0
+    fi
+    if [[ -f $dest && $(hash_of "$dest") == "$(hash_of "$src")" ]]; then printf '\nModel bounds fix: already current (Data/patch-YF.mpq).\n'; return 0; fi
+    if [[ -f $dest ]]; then
+        bk=$client/FTA-Linux/modelfix-backup/$(date +%Y%m%d-%H%M%S)
+        mkdir -p -- "$bk" && cp -p -- "$dest" "$bk/patch-YF.mpq" && printf 'Kept the previous patch-YF.mpq in %s\n' "$bk" || { printf 'Could not back up the old patch-YF.mpq; left unchanged.\n'; return 0; }
+    fi
+    cp -f -- "$src" "$dest.new" && mv -f -- "$dest.new" "$dest" || { rm -f -- "$dest.new"; printf 'Could not write %s.\n' "$dest"; return 0; }
+    printf '\nModel bounds fix installed: Data/patch-YF.mpq. Quest objects such as the Heartswood tree can be clicked again; the file only corrects 17 models'"'"' bounds. Delete it to undo.\n'
+}
+modelfix_install || printf 'The model bounds fix could not be set up (the install itself is fine).\n'
 
 # ---- optional login screens ----------------------------------------------------------------------
 # A separate download (about 207 MB) kept on Google Drive: ten small packs, installed as

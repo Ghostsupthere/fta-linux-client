@@ -88,6 +88,14 @@ if [[ -d $addons/NetherBotClickGuard ]]; then
 else
     printf 'No NetherBot Click Guard addon at %s; the installer will not carry it.\n' "$addons"
 fi
+# The model bounds fix (Data/patch-YF.mpq, see data/README.md) travels inside the installer as FTA-Data/.
+if [[ -f $repo/data/patch-YF.mpq ]]; then
+    mkdir -p -- "$stage/FTA-Data"
+    cp -- "$repo/data/patch-YF.mpq" "$stage/FTA-Data/patch-YF.mpq"
+    printf 'Data pack bundled: patch-YF.mpq (model bounds fix)\n'
+else
+    printf 'No data/patch-YF.mpq in %s; the installer will not carry the model bounds fix.\n' "$repo"
+fi
 chmod +x "$stage/install.sh" "$stage/payload/Wow64" "$stage/payload/FTA-Linux/play.sh" "$stage/payload/FTA-Linux/install-deps.sh" \
     "$stage/payload/FTA-Linux/optional.sh" "$stage/payload/FTA-Linux/uninstall.sh"
 if find "$stage" -type l | grep -q .; then fail 'the payload contains symlinks'; fi

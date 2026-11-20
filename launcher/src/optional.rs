@@ -7,7 +7,7 @@ use std::path::Path;
 use std::process::Command;
 
 /// The pieces the script knows, in the order the tab shows them. Only these ids are ever passed to it.
-pub const IDS: &[&str] = &["murloc", "realmdesk", "bodyshape", "clickguard", "fixes", "texture"];
+pub const IDS: &[&str] = &["murloc", "realmdesk", "bodyshape", "clickguard", "modelfix", "fixes", "texture"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum State {
