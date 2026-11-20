@@ -2,8 +2,10 @@ FTA addon fixes
 ===============
 
 Twelve small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
-six in Questie-335, one in NPCBotPaperdoll, one in MobSpells).
-They are optional and independent of the Linux client: they apply to the Interface folder on any platform.
+six in Questie-335, one in NPCBotPaperdoll, one in MobSpells), one change to the old ncBiggerMacros addon, and the new
+macro window (three files that the base client does not have as separate files: item 12).
+They are optional and apply to the Interface folder on any platform; the macro window's long macros need a Linux
+client that has native macros (it falls back to the normal 255-character window on any other client).
 Close the game before copying.
 
 1. ElvUI 6.09, Modules/Chat/Chat.lua: achievement chat messages
@@ -99,6 +101,23 @@ Close the game before copying.
    show abilities". Pressing or releasing Alt rebuilds the open unit tooltip. The addon's options are unchanged.
    Status: the logic was tested outside the game with stand-in functions; not yet looked at in play.
 
+12. Macro window (new files) and ncBiggerMacros: long macros
+   Needs a client with native macros (the Linux client from the release that carries this bundle).
+   What it adds: Interface/AddOns/Blizzard_MacroUI/Blizzard_MacroUI.lua, Blizzard_MacroUI.xml and FTA_MacroEditor.lua.
+   They replace the macro window with one that keeps macros up to 2048 characters (the normal limit is 255), shows a
+   character counter, has a Save button, and an Expand button that opens a larger editor with Undo/Redo, a syntax
+   preview, Check (validates the macro), Complete, Duplicate, and Find/Replace. The files come from the game's own
+   archives plus our changes, so the installer ADDS them (the client has no such loose files) and leaves a different
+   file that is already there alone. On a client without native macros the window works like the normal one.
+   ncBiggerMacros.lua (a change to an existing file): that addon replaced the macro window's functions with ones made
+   for the 255-character window; with the new window they made clicking a macro do nothing. It now steps aside when the
+   client has native macros, and moves anything it stored earlier (a macro whose text is only "/click ExtraMacrosN") back
+   into the client's own macro storage.
+   Where macros are kept: the Linux client saves them in WTF\Account\<account>\<realm>\macros-cache.fta (account
+   macros) and in the character's folder. Your existing macros are imported from macros-cache.txt the first time;
+   that file is left alone. Macros are not uploaded to the realm any more (they are not synchronised between PCs).
+   Status: tested in play on one account (import, select, edit, long macros, Duplicate, Find/Replace, saving).
+
 Credit: the Questie map-icon fixes (items 4b and 4c, 5, 6 and 7) are by Grandpa_Boris.
 
 Install
@@ -108,7 +127,7 @@ up under FTA-Linux/addon-fix-backup/ and applies the fixes: a file is replaced o
 fixes were made for, otherwise the patch is applied if it fits (needs the "patch" tool), otherwise the file is left
 alone. Use --no-fixes to skip it, or --fixes PATH to point at a fixes folder.
 
-Option A, replace the twelve files by hand. These are complete copies of the files as shipped in the base client, so
+Option A, replace the files by hand (items 1-11 and ncBiggerMacros; item 12's three new files are simply copied in). These are complete copies of the files as shipped in the base client, so
 only use this if your ElvUI is 6.09 and your Questie-335 and AshenBotUpgrade match the base client. Copy the Interface folder from
 this archive over the Interface folder of your client folder (the one that holds Wow64 and Data).
 
@@ -121,7 +140,8 @@ client folder:
 Then /reload in game, or restart the client.
 
 Undo: patch -R -p1 with the same patch files (after Option B), or restore your backup (the installer keeps
-one in FTA-Linux/addon-fix-backup/).
+one in FTA-Linux/addon-fix-backup/). The files item 12 added are listed in FTA-Linux/addon-fix-new-files.txt; delete
+them (or use the launcher's Extras tab, "Addon fixes", which takes them out and puts the originals back).
 
 ElvUI and Questie keep their own licenses. These changes are offered under the same terms as the files they
 modify. No game data is included.

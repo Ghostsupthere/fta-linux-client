@@ -5,7 +5,8 @@
 #
 # BEFORE_DIR and AFTER_DIR are two copies of the client's folder tree holding only Interface/AddOns/... files:
 # the originals and the fixed versions. Every file that differs becomes a manifest entry, a patch and a drop-in
-# copy. New files are not supported (the installer only fixes files the client already has).
+# copy. A file that is in AFTER_DIR but not in BEFORE_DIR becomes a "new file" entry (original sha "-", no patch): the
+# installer adds it when it is missing and leaves a different file that is already there alone.
 # EXTRA_ORIGINALS_FILE (optional) has lines "<relative path><TAB><sha256>[,<sha256>...]": earlier fixed versions of a file that the
 # installer may also replace with the drop-in copy (so a client that has an older release of the fixes is brought up to date).
 # SUMMARY_FILE (optional) has one line per file: "<relative path><TAB><one-line description>"; the installer
@@ -32,17 +33,23 @@ printf '# relative path\toriginal sha256\tfixed sha256\tpatch\tsummary\n' >"$des
 n=0
 while IFS= read -r -d '' file; do
     rel=${file#"$after"/}
-    [[ -f $before/$rel ]] || fail "$rel is new; only changes to existing files are supported"
-    cmp -s -- "$before/$rel" "$after/$rel" && continue
-    n=$((n + 1))
-    patch=$(printf '%02d-%s.patch' "$n" "$(basename -- "$rel" | tr -c 'A-Za-z0-9.\n_-' '_')")
-    # diff exits 1 when the files differ; the labels give the patch a/ b/ paths for patch -p1.
-    diff -u --label "a/$rel" --label "b/$rel" -- "$before/$rel" "$after/$rel" >"$dest/patches/$patch" || [[ $? -eq 1 ]]
+    if [[ -f $before/$rel ]]; then
+        cmp -s -- "$before/$rel" "$after/$rel" && continue
+        n=$((n + 1))
+        patch=$(printf '%02d-%s.patch' "$n" "$(basename -- "$rel" | tr -c 'A-Za-z0-9.\n_-' '_')")
+        # diff exits 1 when the files differ; the labels give the patch a/ b/ paths for patch -p1.
+        diff -u --label "a/$rel" --label "b/$rel" -- "$before/$rel" "$after/$rel" >"$dest/patches/$patch" || [[ $? -eq 1 ]]
+        original=$(sha256sum -- "$before/$rel" | cut -d' ' -f1)
+    else
+        n=$((n + 1))
+        patch=-
+        original=-
+    fi
     mkdir -p -- "$dest/$(dirname -- "$rel")"
     cp -- "$after/$rel" "$dest/$rel"
     note=""
     [[ -z $summaries ]] || note=$(awk -F'\t' -v r="$rel" '$1 == r { print $2; exit }' "$summaries")
-    printf '%s\t%s\t%s\t%s\t%s\n' "$rel" "$(sha256sum -- "$before/$rel" | cut -d' ' -f1)" \
+    printf '%s\t%s\t%s\t%s\t%s\n' "$rel" "$original" \
         "$(sha256sum -- "$after/$rel" | cut -d' ' -f1)" "$patch" "$note" >>"$dest/fixes.manifest"
 done < <(find "$after/Interface/AddOns" -type f -print0 | sort -z)
 (( n )) || fail 'no differing files found'

@@ -71,7 +71,7 @@ state() { # state ID: installed | removed | absent
             [[ -f $state_dir/no-modelfix ]] && { printf removed; return; }
             printf absent ;;
         fixes)
-            [[ -d $state_dir/addon-fix-backup ]] && { printf installed; return; }
+            [[ -d $state_dir/addon-fix-backup || -f $state_dir/addon-fix-new-files.txt ]] && { printf installed; return; }
             printf absent ;;
         texture)
             if [[ -f $cfg ]] && grep -qxF "$tex_line" <(tr -d '\r' <"$cfg"); then printf installed
@@ -155,10 +155,21 @@ cmd_remove() {
             : >"$state_dir/no-modelfix"
             printf 'Updates will leave it out. The HD tree, tents and the rest of the 17 models go back to their broken bounds (some cannot be clicked).\n' ;;
         fixes)
-            [[ -d $state_dir/addon-fix-backup ]] || { printf 'No addon fixes were applied here.\n'; return 0; }
+            [[ -d $state_dir/addon-fix-backup || -f $state_dir/addon-fix-new-files.txt ]] || { printf 'No addon fixes were applied here.\n'; return 0; }
             dir=$(new_removed_dir)
             local b rel n=0
             local -A seen=()
+            # Files the fixes added (they have no original to put back): moved out of the client, copies kept in <dir>/fixed.
+            if [[ -f $state_dir/addon-fix-new-files.txt ]]; then
+                while IFS= read -r rel; do
+                    [[ -z $rel || $rel == *..* ]] && continue
+                    case $rel in Interface/AddOns/*) ;; *) continue ;; esac
+                    if [[ -f $client/$rel ]]; then
+                        mkdir -p -- "$dir/fixed/$(dirname -- "$rel")" && mv -- "$client/$rel" "$dir/fixed/$rel" && n=$((n + 1))
+                    fi
+                done <"$state_dir/addon-fix-new-files.txt"
+                mv -- "$state_dir/addon-fix-new-files.txt" "$dir/addon-fix-new-files.txt"
+            fi
             # Each fixed file was backed up the first time it changed, in a folder named by the date: walking the
             # folders oldest first, the first copy of a file seen is the original.
             while IFS= read -r -d '' b; do
@@ -171,8 +182,8 @@ cmd_remove() {
                 mkdir -p -- "$client/$(dirname -- "$rel")" && cp -p -- "$b" "$client/$rel"
                 n=$((n + 1))
             done < <(find "$state_dir/addon-fix-backup" -type f -print0 | sort -z)
-            mv -- "$state_dir/addon-fix-backup" "$dir/addon-fix-backup"
-            printf 'Put %d original addon file(s) back. The fixed copies are in %s/fixed. Updates will not apply the fixes again unless you run the installer by hand.\n' "$n" "$dir" ;;
+            [[ -d $state_dir/addon-fix-backup ]] && mv -- "$state_dir/addon-fix-backup" "$dir/addon-fix-backup"
+            printf 'Put %d original addon file(s) back or took out added ones. The fixed copies are in %s/fixed. Updates will not apply the fixes again unless you run the installer by hand.\n' "$n" "$dir" ;;
         texture)
             if [[ -f $cfg ]] && grep -qxF "$tex_line" <(tr -d '\r' <"$cfg"); then
                 dir=$(new_removed_dir); cp -p -- "$cfg" "$dir/Config.wtf"

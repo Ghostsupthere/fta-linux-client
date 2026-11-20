@@ -281,6 +281,27 @@ fixes_apply() {
         fi
         target=$client/$rel
         patchfile=$fixes_dir/patches/$patchf
+        if [[ $orig == - ]]; then
+            # A file the client does not have (the macro window files, which only exist inside the game's archives).
+            # Added when missing; a different file that is already there is somebody's own and stays.
+            if [[ -f $target ]]; then
+                if [[ $(hash_of "$target") == "$fixed" ]]; then
+                    printf '  already added: %s\n' "$rel"; same=$((same + 1))
+                else
+                    printf '  left unchanged: %s (a different file is already there)\n' "$rel"; skipped=$((skipped + 1))
+                fi
+                continue
+            fi
+            if [[ -f $fixes_dir/$rel && $(hash_of "$fixes_dir/$rel") == "$fixed" ]] &&
+               mkdir -p -- "$(dirname -- "$target")" && cp -- "$fixes_dir/$rel" "$target"; then
+                mkdir -p -- "$client/FTA-Linux"
+                grep -qxF -- "$rel" "$client/FTA-Linux/addon-fix-new-files.txt" 2>/dev/null || printf '%s\n' "$rel" >>"$client/FTA-Linux/addon-fix-new-files.txt"
+                printf '  added: %s\n' "$rel"; applied=$((applied + 1))
+            else
+                printf '  could not add %s\n' "$rel"; skipped=$((skipped + 1))
+            fi
+            continue
+        fi
         if [[ ! -f $target ]]; then
             printf '  skipped %s (not installed in this client)\n' "$rel"; skipped=$((skipped + 1)); continue
         fi
@@ -320,7 +341,7 @@ fixes_apply() {
 }
 fixes_applied_before() { # true if this client has had addon fixes applied by an earlier install
     local rel orig fixed _
-    [[ -d $client/FTA-Linux/addon-fix-backup ]] && return 0
+    [[ -d $client/FTA-Linux/addon-fix-backup || -f $client/FTA-Linux/addon-fix-new-files.txt ]] && return 0
     while IFS=$'\t' read -r rel orig fixed _; do
         [[ -z $rel || $rel == \#* ]] && continue
         [[ -f $client/$rel && $(hash_of "$client/$rel") == "$fixed" ]] && return 0
