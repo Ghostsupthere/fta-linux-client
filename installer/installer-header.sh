@@ -42,15 +42,15 @@ LOGIN_SCREENS_SHA256=a03c6881b1ece9525020972ffbcc3f510f6b9d58c94a166b800f0d13179
 
 # The housing pack (FTA-Housing-Packs.zip, about 760 MB: five archives with the decor models and room pieces for the realm's
 # player housing, plus a texture list) is an opt-in download. It must match this checksum or nothing is installed from it.
-HOUSING_PACK_URL='https://drive.google.com/file/d/18BoZmqHAzM6s4MMxlHBBGW6uTs7VE2M-/view?usp=sharing'
-HOUSING_PACK_ID=18BoZmqHAzM6s4MMxlHBBGW6uTs7VE2M-
+HOUSING_PACK_URL='https://drive.google.com/file/d/1bsAIKhYKciJNUsDbjJ8bSMwuUqRzR10m/view?usp=sharing'
+HOUSING_PACK_ID=1bsAIKhYKciJNUsDbjJ8bSMwuUqRzR10m
 HOUSING_PACK_SHA256=2d342dee83b4456c42c96d89e854f11fbed46935fbfa6c5febf0172009df898f
 HOUSING_FILES=(Data/patch-ZE.mpq Data/patch-ZF.mpq Data/patch-ZG.mpq Data/patch-ZH.mpq Data/patch-ZI.mpq Utils/WarcraftXL/FileDataID.extra.csv)
 
 # The Murloc race patch (patch-ZD.mpq, about 12 MB: the custom playable Murloc race of the From The Ashes realm) is a separate download too,
 # because it carries game models and textures. The file must match this checksum or nothing is installed from it.
-MURLOC_PATCH_URL='https://drive.google.com/file/d/1r84grn0yiBx3A063Vl-5wrkK9rwi2gm0/view?usp=sharing'
-MURLOC_PATCH_ID=1r84grn0yiBx3A063Vl-5wrkK9rwi2gm0
+MURLOC_PATCH_URL='https://drive.google.com/file/d/1gmfPS-RJY1CHYbY8X20Ov20Ug6_nRbuX/view?usp=sharing'
+MURLOC_PATCH_ID=1gmfPS-RJY1CHYbY8X20Ov20Ug6_nRbuX
 MURLOC_PATCH_SHA256=df580c5ef1afaa8f31e6c962b0490e04ad8c940e3f6818c6cf9adb51d2fbb156
 
 self=$(readlink -f -- "$0")
