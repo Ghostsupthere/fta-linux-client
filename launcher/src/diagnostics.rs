@@ -166,6 +166,23 @@ fn latest_launch_log(client: &Path) -> Option<(PathBuf, String)> {
     Some((path, tail))
 }
 
+/// How many crash reports the game wrote to `Errors/`, the newest one and its first lines.
+fn latest_crash_report(client: &Path) -> Option<(usize, PathBuf, String)> {
+    let mut reports: Vec<PathBuf> = std::fs::read_dir(client.join("Errors"))
+        .ok()?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("txt")))
+        .collect();
+    reports.sort(); // names carry the date and time
+    let count = reports.len();
+    let path = reports.pop()?;
+    let bytes = std::fs::read(&path).ok()?;
+    let text = String::from_utf8_lossy(&bytes);
+    let head: String = text.lines().take(40).collect::<Vec<_>>().join("\n");
+    Some((count, path, head.chars().take(4000).collect()))
+}
+
 fn host_only(realm: &str) -> String {
     realm.split(':').next().unwrap_or(realm).to_string()
 }
@@ -218,7 +235,7 @@ pub fn run(client: Option<&Path>, launcher_version: &str, update_note: &str) -> 
     // ---- the install ----
     let Some(client) = client else {
         checks.push(check(Level::Fail, "Client folder", "not found. Start the launcher with --client /path/to/client"));
-        return finish(checks, launcher_version, update_note, None, None);
+        return finish(checks, launcher_version, update_note, None, None, None);
     };
     checks.push(check(Level::Ok, "Client folder", tidy(&client.display().to_string())));
     let wow = client.join("Wow64");
@@ -240,16 +257,104 @@ pub fn run(client: Option<&Path>, launcher_version: &str, update_note: &str) -> 
             Err(e) => checks.push(check(Level::Fail, "System libraries", e)),
         }
     }
-    let packs = ["light_shaders", "wmo_shaders", "grass_shaders", "grass_instanced"];
+    let packs = ["light_shaders", "light_weather", "wmo_shaders", "soft_particles", "grass_shaders", "grass_instanced"];
     let absent: Vec<&str> = packs
         .iter()
         .copied()
         .filter(|p| !client.join(format!("Utils/WarcraftXL/visuals/{p}.pack")).is_file())
         .collect();
     if absent.is_empty() {
-        checks.push(check(Level::Ok, "Shader packs", "all four are installed"));
+        checks.push(check(Level::Ok, "Shader packs", format!("all {} are installed", packs.len())));
     } else {
         checks.push(check(Level::Warn, "Shader packs", format!("missing: {} (those features stay off)", absent.join(", "))));
+    }
+
+    let lamps = client.join("Utils/WarcraftXL/visuals/lamp_models.csv");
+    if lamps.is_file() {
+        let n = std::fs::read_to_string(&lamps).map(|t| t.lines().filter(|l| !l.trim().is_empty() && !l.starts_with('#')).count().saturating_sub(1)).unwrap_or(0);
+        checks.push(check(Level::Ok, "Lamp catalog", format!("{n} models")));
+    } else {
+        checks.push(check(Level::Warn, "Lamp catalog", "lamp_models.csv is missing (static lamps and torches stay off)"));
+    }
+
+    // ---- optional data patches ----
+    let data = client.join("Data");
+    let has = |f: &str| data.join(f).is_file();
+    let (mut present, mut absent_p) = (Vec::new(), Vec::new());
+    for (label, ok) in [
+        ("model bounds fix", has("patch-YF.mpq")),
+        ("Flamestrike fix", has("patch-Z9.mpq") && has("patch-ZY.mpq")),
+        ("Murloc race", has("patch-ZD.mpq")),
+    ] {
+        if ok { present.push(label.to_string()) } else { absent_p.push(label.to_string()) }
+    }
+    let screens = std::fs::read_dir(data.join("LoginScreens")).map(|d| d.flatten().filter(|e| e.file_name().to_string_lossy().starts_with("login-")).count()).unwrap_or(0);
+    checks.push(check(
+        Level::Ok,
+        "Data patches",
+        format!(
+            "installed: {}; not installed: {}; {} login screen pack(s)",
+            if present.is_empty() { "none".to_string() } else { present.join(", ") },
+            if absent_p.is_empty() { "none".to_string() } else { absent_p.join(", ") },
+            screens
+        ),
+    ));
+
+    // ---- interface ----
+    let env_ini = std::fs::read_to_string(client.join("WTF/WXL/Environment.ini")).ok();
+    let env_value = |key: &str| -> Option<String> {
+        env_ini.as_ref()?.lines().find_map(|l| {
+            let (k, v) = l.trim().split_once('=')?;
+            (k.trim() == key).then(|| v.trim().to_string())
+        })
+    };
+    let addons = client.join("Interface/AddOns");
+    let drake = addons.join("DrakeishUI");
+    let drake_installed = drake.join("DrakeishUI.toc").is_file();
+    let drake_complete = drake_installed && drake.join("SelectivePackageManifest.json").is_file() && drake.join("modules/DragonflightUI/Textures").is_dir();
+    let drake_selected = env_value("addons.drakeishUI").map(|v| crate::catalog::parse_bool(&v)).unwrap_or(true);
+    let elvui = addons.join("ElvUI/ElvUI.toc").is_file();
+    let (level, detail) = if drake_installed && !drake_complete {
+        (Level::Warn, "DrakeishUI is installed but incomplete (textures or manifest missing); run the installer again, then restart the game".to_string())
+    } else if drake_selected && !drake_installed {
+        (Level::Warn, "DrakeishUI is the selected interface but is not installed (run the installer, or Extras > DrakeishUI)".to_string())
+    } else if drake_installed && drake_selected {
+        (Level::Ok, format!("DrakeishUI selected{}", if elvui { "; ElvUI is installed but stays off while DrakeishUI is selected" } else { "" }))
+    } else if drake_installed {
+        (Level::Ok, format!("DrakeishUI installed but not selected (Interface > Game > Interface style){}", if elvui { "; ElvUI can load" } else { "" }))
+    } else {
+        (Level::Ok, "stock interface (DrakeishUI is not installed)".to_string())
+    };
+    checks.push(check(level, "Interface", detail));
+    match &env_ini {
+        Some(text) => {
+            let n = text.lines().filter(|l| l.contains('=')).count();
+            let preview = env_value("atmosphere.preview").map(|v| crate::catalog::parse_bool(&v)).unwrap_or(false);
+            checks.push(check(
+                Level::Ok,
+                "In-game visual settings",
+                format!("{n} saved; \"Use these settings\" is {}", if preview { "on (the in-game page overrides the launch profile)" } else { "off (the launcher profile applies)" }),
+            ));
+        }
+        None => checks.push(check(Level::Ok, "In-game visual settings", "none saved yet (Video options > Effects > Visuals & Guidance)")),
+    }
+
+    // ---- crash reports ----
+    let crash = latest_crash_report(client);
+    match &crash {
+        Some((count, path, _)) => {
+            let recent = std::fs::metadata(path)
+                .and_then(|m| m.modified())
+                .ok()
+                .and_then(|t| std::time::SystemTime::now().duration_since(t).ok())
+                .is_some_and(|age| age.as_secs() < 7 * 24 * 3600);
+            checks.push(check(
+                if recent { Level::Warn } else { Level::Ok },
+                "Crash reports",
+                format!("{count} in Errors/, newest {}{}", path.file_name().and_then(|n| n.to_str()).unwrap_or("?"), if recent { " (within the last week; its first lines are in the saved report)" } else { "" }),
+            ));
+        }
+        None => checks.push(check(Level::Ok, "Crash reports", "none")),
     }
 
     // ---- settings ----
@@ -287,10 +392,11 @@ pub fn run(client: Option<&Path>, launcher_version: &str, update_note: &str) -> 
     }
 
     let log = latest_launch_log(client);
-    finish(checks, launcher_version, update_note, Some(client), log)
+    let crash_head = crash.map(|(_, path, head)| (path, head));
+    finish(checks, launcher_version, update_note, Some(client), log, crash_head)
 }
 
-fn finish(checks: Vec<Check>, launcher_version: &str, update_note: &str, client: Option<&Path>, log: Option<(PathBuf, String)>) -> Report {
+fn finish(checks: Vec<Check>, launcher_version: &str, update_note: &str, client: Option<&Path>, log: Option<(PathBuf, String)>, crash: Option<(PathBuf, String)>) -> Report {
     let mut text = String::new();
     text.push_str("Realmgate launcher: diagnostics report\n");
     // The release tag is what matters once a client is known; the crate version is only a fallback.
@@ -318,6 +424,9 @@ fn finish(checks: Vec<Check>, launcher_version: &str, update_note: &str, client:
     }
     if let Some((path, tail)) = log {
         text.push_str(&format!("\nLast launch log ({}), final lines:\n{}\n", path.file_name().and_then(|n| n.to_str()).unwrap_or("?"), tail));
+    }
+    if let Some((path, head)) = crash {
+        text.push_str(&format!("\nNewest crash report ({}), first lines:\n{}\n", path.file_name().and_then(|n| n.to_str()).unwrap_or("?"), head));
     }
     Report { checks, text: tidy(&text) }
 }
@@ -352,6 +461,27 @@ mod tests {
         assert!(!r.text.contains(":3724"), "only the host is reported");
         assert!(r.text.contains("1920x1080, windowed"));
         assert!(r.checks.iter().any(|c| c.name == "Game program" && c.level == Level::Fail));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn interface_and_crash_checks_read_the_client_folder() {
+        let dir = std::env::temp_dir().join(format!("fta-launcher-diag2-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("WTF")).unwrap();
+        std::fs::create_dir_all(dir.join("Data")).unwrap();
+        std::fs::create_dir_all(dir.join("Interface/AddOns/DrakeishUI")).unwrap();
+        std::fs::create_dir_all(dir.join("Errors")).unwrap();
+        std::fs::write(dir.join("WTF/Config.wtf"), "SET realmList \"example.org\"\n").unwrap();
+        std::fs::write(dir.join("Interface/AddOns/DrakeishUI/DrakeishUI.toc"), "## Title: x\n").unwrap();
+        std::fs::write(dir.join("Errors/2026-01-01 00.00.00 Crash.txt"), "line one\nline two\n").unwrap();
+        let r = run(Some(&dir), "0.0.0", "");
+        let find = |name: &str| r.checks.iter().find(|c| c.name == name).unwrap_or_else(|| panic!("no check {name}"));
+        assert_eq!(find("Interface").level, Level::Warn);
+        assert!(find("Interface").detail.contains("incomplete"));
+        assert!(find("Crash reports").detail.starts_with("1 in Errors/"));
+        assert!(find("Data patches").detail.contains("not installed"));
+        assert!(r.text.contains("Newest crash report") && r.text.contains("line two"));
         let _ = std::fs::remove_dir_all(&dir);
     }
 

@@ -169,14 +169,14 @@ mod tests {
     #[test]
     fn apply_changes_only_what_changed_and_backs_up() {
         let dir = scratch("apply");
-        let cfg = "# keep me\r\nWXL_GOD_RAYS=1\r\nWXL_MODERN_WATER=1\nSOMETHING_ELSE=abc\r\n";
+        let cfg = "# keep me\r\nWXL_FORWARD_SCATTERING=1\r\nWXL_VISUAL_MULTISAMPLING=1\nSOMETHING_ELSE=abc\r\n";
         let wtf = "SET locale \"enUS\"\nSET gxWindow \"1\"\n";
         fs::write(dir.join("WarcraftXL.cfg"), cfg).unwrap();
         fs::write(dir.join("WTF/Config.wtf"), wtf).unwrap();
 
         let mut s = Settings::load(&dir);
         assert!(!s.is_dirty());
-        let god = SETTINGS.iter().position(|x| x.key == "WXL_GOD_RAYS").unwrap();
+        let god = SETTINGS.iter().position(|x| x.key == "WXL_FORWARD_SCATTERING").unwrap();
         let threads = SETTINGS.iter().position(|x| x.key == "M2UseThreads").unwrap();
         assert!(s.values[god]);
         assert!(s.values[threads], "missing key uses the catalog default");
@@ -188,7 +188,7 @@ mod tests {
 
         assert_eq!(
             fs::read_to_string(dir.join("WarcraftXL.cfg")).unwrap(),
-            "# keep me\r\nWXL_GOD_RAYS=0\r\nWXL_MODERN_WATER=1\nSOMETHING_ELSE=abc\r\n"
+            "# keep me\r\nWXL_FORWARD_SCATTERING=0\r\nWXL_VISUAL_MULTISAMPLING=1\nSOMETHING_ELSE=abc\r\n"
         );
         assert_eq!(
             fs::read_to_string(dir.join("WTF/Config.wtf")).unwrap(),
@@ -232,11 +232,11 @@ mod tests {
     #[test]
     fn untouched_file_is_not_rewritten() {
         let dir = scratch("untouched");
-        fs::write(dir.join("WarcraftXL.cfg"), "WXL_GOD_RAYS=1\n").unwrap();
+        fs::write(dir.join("WarcraftXL.cfg"), "WXL_FORWARD_SCATTERING=1\n").unwrap();
         fs::write(dir.join("WTF/Config.wtf"), "SET a \"1\"\n").unwrap();
         let before = fs::metadata(dir.join("WTF/Config.wtf")).unwrap().modified().unwrap();
         let mut s = Settings::load(&dir);
-        let i = SETTINGS.iter().position(|x| x.key == "WXL_GOD_RAYS").unwrap();
+        let i = SETTINGS.iter().position(|x| x.key == "WXL_FORWARD_SCATTERING").unwrap();
         s.toggle(i);
         s.apply().unwrap();
         // only the cfg changed, so Config.wtf must be neither rewritten nor backed up
@@ -249,12 +249,12 @@ mod tests {
     #[test]
     fn preset_loads_values_without_writing() {
         let dir = scratch("preset");
-        fs::write(dir.join("WarcraftXL.cfg"), "WXL_GOD_RAYS=1\n").unwrap();
+        fs::write(dir.join("WarcraftXL.cfg"), "WXL_FORWARD_SCATTERING=1\n").unwrap();
         let mut s = Settings::load(&dir);
         let name = s.load_preset(PRESETS.iter().position(|p| p.name == "Safe mode").unwrap());
         assert_eq!(name, Some("Safe mode"));
         assert!(s.is_dirty());
-        assert_eq!(fs::read_to_string(dir.join("WarcraftXL.cfg")).unwrap(), "WXL_GOD_RAYS=1\n");
+        assert_eq!(fs::read_to_string(dir.join("WarcraftXL.cfg")).unwrap(), "WXL_FORWARD_SCATTERING=1\n");
         let _ = fs::remove_dir_all(&dir);
     }
 
