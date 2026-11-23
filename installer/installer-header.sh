@@ -508,6 +508,26 @@ clickguard_install() {
 }
 clickguard_install || printf 'The NetherBot Click Guard addon could not be set up (the install itself is fine).\n'
 
+# Load-on-demand addons are only installed when their folder is absent.
+# Existing addon folders and saved variables are owned by the player.
+install_optional_native_addon() {
+    local name=$1 src dest staged
+    src=$tmp/FTA-Addons/$name
+    dest=$client/Interface/AddOns/$name
+    [[ -f $src/$name.toc && ! -e $dest && ! -L $dest ]] || return 0
+    mkdir -p -- "$client/Interface/AddOns" || return 1
+    staged=$(mktemp -d "$client/Interface/AddOns/.$name.XXXXXX") || return 1
+    if cp -a -- "$src/." "$staged/" && mv -T --no-clobber -- "$staged" "$dest" && [[ ! -d $staged ]]; then
+        printf 'Optional addon installed: %s\n' "$name"
+        return 0
+    fi
+    rm -rf -- "$staged"
+    return 1
+}
+for optional_addon in FTAQuestTracker FTA_Resilience; do
+    install_optional_native_addon "$optional_addon" || printf 'Optional addon left as-is: %s\n' "$optional_addon"
+done
+
 # ---- model bounds fix --------------------------------------------------------------------------------------------
 # One file, Data/patch-YF.mpq (about 0.9 MB): the base client's Patch-YD.mpq has HD copies of a few world models (the Heartswood quest tree, a campfire, tents,
 # fallen trees ... 17 in all) whose animation bounds are corrupt, so the game culls them from low camera angles and cannot pick them with the mouse (a quest

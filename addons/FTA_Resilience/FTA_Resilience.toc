@@ -1,0 +1,8 @@
+## Interface: 30300
+## LoadOnDemand: 1
+## Title: From the Ashes Resilience
+## Notes: Accurate unified PvP resilience tooltips using server curve settings.
+## Version: 2026.11.03
+## Author: From the Ashes
+
+Resilience.lua

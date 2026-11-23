@@ -1,0 +1,10 @@
+## Interface: 30300
+## LoadOnDemand: 1
+## Title: FTA Quest Tracker
+## Notes: Follow watched quests and their objectives in From the Ashes.
+## Version: 1.2.1
+## Author: From the Ashes
+## SavedVariablesPerCharacter: FTAQuestTrackerSettings
+
+QuestData.lua
+Tracker.lua

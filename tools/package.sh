@@ -88,6 +88,14 @@ if [[ -d $addons/NetherBotClickGuard ]]; then
 else
     printf 'No NetherBot Click Guard addon at %s; the installer will not carry it.\n' "$addons"
 fi
+for optional_addon in FTAQuestTracker FTA_Resilience; do
+    src=$addons/$optional_addon
+    [[ -f $src/$optional_addon.toc ]] || continue
+    [[ $(sed -n 's/^## LoadOnDemand: *//p' "$src/$optional_addon.toc") == 1 ]] || fail "$optional_addon must load only on demand"
+    mkdir -p -- "$stage/FTA-Addons"
+    cp -a -- "$src" "$stage/FTA-Addons/$optional_addon"
+    printf 'Optional addon bundled: %s\n' "$optional_addon"
+done
 # The model bounds fix (Data/patch-YF.mpq, see data/README.md) travels inside the installer as FTA-Data/.
 if [[ -f $repo/data/patch-YF.mpq ]]; then
     mkdir -p -- "$stage/FTA-Data"
