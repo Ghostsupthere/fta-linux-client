@@ -28,6 +28,10 @@
 #   --clickguard     install it even if you opted out earlier
 #   --no-modelfix    do not install the model bounds fix (Data/patch-YF.mpq), now or in later updates
 #   --modelfix       install it even if you opted out earlier
+#   --no-drakeish    do not install the DrakeishUI interface (about 217 MB installed), now or in later updates
+#   --drakeish       install it even if you opted out earlier
+#   --no-flamestrike do not install the Flamestrike fix (Data/patch-Z9.mpq and patch-ZY.mpq), now or in later updates
+#   --flamestrike    install it even if you opted out earlier
 #   --update         for the launcher's Update button: no questions, no sudo, no terminal; keeps the shortcut
 #                    (pointing it at the launcher), applies addon fixes only if they were applied before
 set -euo pipefail
@@ -48,7 +52,7 @@ MURLOC_PATCH_SHA256=df580c5ef1afaa8f31e6c962b0490e04ad8c940e3f6818c6cf9adb51d2fb
 
 self=$(readlink -f -- "$0")
 ORIGINAL_ARGS="$*"
-client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" texture_level=1 realmdesk=auto bodyshape=auto clickguard=auto modelfix=auto
+client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" texture_level=1 realmdesk=auto bodyshape=auto clickguard=auto modelfix=auto drakeish=auto flamestrike=auto
 out_tty=0; [[ -t 1 ]] && out_tty=1   # the log below replaces stdout, so ask now
 while (( $# )); do
     case $1 in
@@ -68,13 +72,17 @@ while (( $# )); do
         --no-clickguard) clickguard=no ;;
         --modelfix) modelfix=yes ;;
         --no-modelfix) modelfix=no ;;
+        --drakeish) drakeish=yes ;;
+        --no-drakeish) drakeish=no ;;
+        --flamestrike) flamestrike=yes ;;
+        --no-flamestrike) flamestrike=no ;;
         --murloc) murloc_dl=yes ;;
         --no-murloc) murloc_dl=no ;;
         --murloc-file) murloc_file=${2:?--murloc-file needs a patch-ZD.mpq}; murloc_dl=yes; shift ;;
         --update) update=1; assume=1; interm=1 ;;
         --in-terminal) interm=1 ;;
         --pause) pause=1 ;;
-        --help|-h) sed -n '2,30p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --help|-h) sed -n '2,34p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
     esac
     shift
@@ -99,6 +107,10 @@ if (( ! interm )) && [[ ! -t 0 || ! -t 1 ]]; then
     [[ $clickguard == no ]] && relaunch+=(--no-clickguard)
     [[ $modelfix == yes ]] && relaunch+=(--modelfix)
     [[ $modelfix == no ]] && relaunch+=(--no-modelfix)
+    [[ $drakeish == yes ]] && relaunch+=(--drakeish)
+    [[ $drakeish == no ]] && relaunch+=(--no-drakeish)
+    [[ $flamestrike == yes ]] && relaunch+=(--flamestrike)
+    [[ $flamestrike == no ]] && relaunch+=(--no-flamestrike)
     [[ -n $murloc_file ]] && relaunch+=(--murloc-file "$murloc_file")
     [[ -n $fixes_path ]] && relaunch+=(--fixes "$fixes_path")
     [[ -n $client ]] && relaunch+=(--client "$client")
@@ -524,9 +536,51 @@ install_optional_native_addon() {
     rm -rf -- "$staged"
     return 1
 }
-for optional_addon in FTAQuestTracker FTA_Resilience DrakeishUI; do
+for optional_addon in FTAQuestTracker FTA_Resilience; do
     install_optional_native_addon "$optional_addon" || printf 'Optional addon left as-is: %s\n' "$optional_addon"
 done
+
+# ---- DrakeishUI interface ------------------------------------------------------------------------
+# DrakeishUI is the modern interface (action bars, bags, character window, talents, map ...) and the default one of this client. It travels inside this
+# installer as FTA-Addons/DrakeishUI and is copied to Interface/AddOns/DrakeishUI. It is load-on-demand: the game loads it at login when "Interface style" is
+# DrakeishUI (Interface > Game). Its saved variables live in WTF, so an update only replaces the addon's own files; a replaced file is first kept in
+# FTA-Linux/drakeish-backup/. --no-drakeish skips it and is remembered (FTA-Linux/no-drakeish) so later updates leave it out; --drakeish installs it again.
+# The game only finds files that exist when it starts, so the game has to be restarted after this step.
+drakeish_install() {
+    local src=$tmp/FTA-Addons/DrakeishUI dest=$client/Interface/AddOns/DrakeishUI marker=$client/FTA-Linux/no-drakeish
+    local file rel cur new=0 changed=0 same=0 bk="" total
+    [[ -f $src/DrakeishUI.toc ]] || { printf '\nDrakeishUI: not bundled with this installer.\n'; return 0; }
+    if [[ $drakeish == no ]]; then
+        mkdir -p -- "$client/FTA-Linux" && : >"$marker" || true
+        printf '\nDrakeishUI: not installed; later updates leave it out too (run with --drakeish to change that).\n'; return 0
+    fi
+    if [[ $drakeish == yes ]]; then rm -f -- "$marker"
+    elif [[ -f $marker ]]; then
+        printf '\nDrakeishUI: left out (you opted out earlier). Run the installer by hand with --drakeish to add it.\n'; return 0
+    fi
+    [[ -d $dest ]] || new=1
+    total=$(find "$src" -type f | wc -l)
+    printf '\nDrakeishUI: checking %d files ...\n' "$total"
+    while IFS= read -r -d '' file; do
+        rel=${file#"$src"/}
+        mkdir -p -- "$dest/$(dirname -- "$rel")" || { printf 'Could not write %s.\n' "$dest"; return 0; }
+        if [[ -f $dest/$rel && $(stat -c %s -- "$dest/$rel") == "$(stat -c %s -- "$file")" ]]; then
+            cur=$(hash_of "$dest/$rel")
+            if [[ $cur == "$(hash_of "$file")" ]]; then same=$((same + 1)); continue; fi
+        fi
+        if [[ -f $dest/$rel ]]; then
+            [[ -n $bk ]] || bk=$client/FTA-Linux/drakeish-backup/$(date +%Y%m%d-%H%M%S)
+            mkdir -p -- "$bk/$(dirname -- "$rel")" && cp -p -- "$dest/$rel" "$bk/$rel" || { printf 'Could not back up %s; left unchanged.\n' "$rel"; continue; }
+        fi
+        cp -f -- "$file" "$dest/$rel.new" && mv -f -- "$dest/$rel.new" "$dest/$rel" || { rm -f -- "$dest/$rel.new"; printf 'Could not write %s.\n' "$dest/$rel"; continue; }
+        changed=$((changed + 1))
+    done < <(find "$src" -type f -print0 | sort -z)
+    if (( new )); then printf 'DrakeishUI installed (%d files) into Interface/AddOns/DrakeishUI.\n' "$changed"
+    else printf 'DrakeishUI updated: %d file(s) replaced, %d already current.\n' "$changed" "$same"; fi
+    [[ -z $bk ]] || printf 'Replaced files kept in %s\n' "$bk"
+    printf 'Restart the game completely (a /reload is not enough) so it finds the new files. DrakeishUI is the default interface; ElvUI and Tukui are switched off at login while it is selected (Interface > Game > Interface style).\n'
+}
+drakeish_install || printf 'DrakeishUI could not be set up (the install itself is fine).\n'
 
 # ---- model bounds fix --------------------------------------------------------------------------------------------
 # One file, Data/patch-YF.mpq (about 0.9 MB): the base client's Patch-YD.mpq has HD copies of a few world models (the Heartswood quest tree, a campfire, tents,
@@ -554,6 +608,39 @@ modelfix_install() {
     printf '\nModel bounds fix installed: Data/patch-YF.mpq. Quest objects such as the Heartswood tree can be clicked again; the file only corrects 17 models'"'"' bounds. Delete it to undo.\n'
 }
 modelfix_install || printf 'The model bounds fix could not be set up (the install itself is fine).\n'
+
+# ---- Flamestrike fix --------------------------------------------------------------------------------------------
+# Two files in Data/: patch-Z9.mpq (SpellVisual.dbc and SpellVisualKit.dbc: Flamestrike ranks 2-9 played a male voice line and stood with their hands down)
+# and patch-ZY.mpq (Spell.dbc with spell 2120 pointed at a working visual). A DBC in a patch replaces the whole table, so these are built on the From The
+# Ashes tables, and patch-ZY.mpq hides every earlier Spell.dbc: when the realm's Spell.dbc changes, the pack has to be rebuilt on the new one. They travel
+# inside this installer as FTA-Data/. A different file of the same name is kept in FTA-Linux/flamestrike-backup/. --no-flamestrike skips both and is remembered
+# (FTA-Linux/no-flamestrike) so later updates leave them out; --flamestrike installs them again. To remove the fix, delete the two files.
+flamestrike_install() {
+    local marker=$client/FTA-Linux/no-flamestrike bk="" file src dest installed=0
+    [[ -f $tmp/FTA-Data/patch-Z9.mpq && -f $tmp/FTA-Data/patch-ZY.mpq ]] || { printf '\nFlamestrike fix: not bundled with this installer.\n'; return 0; }
+    if [[ $flamestrike == no ]]; then
+        mkdir -p -- "$client/FTA-Linux" && : >"$marker" || true
+        printf '\nFlamestrike fix: not installed; later updates leave it out too (run with --flamestrike to change that).\n'; return 0
+    fi
+    if [[ $flamestrike == yes ]]; then rm -f -- "$marker"
+    elif [[ -f $marker ]]; then
+        printf '\nFlamestrike fix: left out (you opted out earlier). Run the installer by hand with --flamestrike to add it.\n'; return 0
+    fi
+    for file in patch-Z9.mpq patch-ZY.mpq; do
+        src=$tmp/FTA-Data/$file dest=$client/Data/$file
+        if [[ -f $dest && $(hash_of "$dest") == "$(hash_of "$src")" ]]; then continue; fi
+        if [[ -f $dest ]]; then
+            [[ -n $bk ]] || bk=$client/FTA-Linux/flamestrike-backup/$(date +%Y%m%d-%H%M%S)
+            mkdir -p -- "$bk" && cp -p -- "$dest" "$bk/$file" || { printf 'Could not back up the old %s; left unchanged.\n' "$file"; continue; }
+        fi
+        cp -f -- "$src" "$dest.new" && mv -f -- "$dest.new" "$dest" || { rm -f -- "$dest.new"; printf 'Could not write %s.\n' "$dest"; continue; }
+        installed=$((installed + 1))
+    done
+    [[ -z $bk ]] || printf 'Kept the previous files in %s\n' "$bk"
+    if (( installed )); then printf '\nFlamestrike fix installed: Data/patch-Z9.mpq and Data/patch-ZY.mpq (restart the game). Delete both files to undo.\n'
+    else printf '\nFlamestrike fix: already current.\n'; fi
+}
+flamestrike_install || printf 'The Flamestrike fix could not be set up (the install itself is fine).\n'
 
 # ---- optional login screens ----------------------------------------------------------------------
 # A separate download (about 207 MB) kept on Google Drive: ten small packs, installed as

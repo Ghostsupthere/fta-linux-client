@@ -1,8 +1,8 @@
 FTA addon fixes
 ===============
 
-Fourteen small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
-eight in Questie-335, one in NPCBotPaperdoll, one in MobSpells), one change to the old ncBiggerMacros addon, and the new
+Fifteen small Lua fixes for addons in the From The Ashes base client (one file in AshenBotUpgrade, three in ElvUI,
+eight in Questie-335, one in NPCBotPaperdoll, one in MobSpells, one in AllStats), one change to the old ncBiggerMacros addon, and the new
 macro window (three files that the base client does not have as separate files: item 16).
 They are optional and apply to the Interface folder on any platform; the macro window's long macros need a Linux
 client that has native macros (it falls back to the normal 255-character window on any other client).
@@ -152,6 +152,14 @@ Close the game before copying.
    macros) and in the character's folder. Your existing macros are imported from macros-cache.txt the first time;
    that file is left alone. Macros are not uploaded to the realm any more (they are not synchronised between PCs).
    Status: tested in play on one account (import, select, edit, long macros, Duplicate, Find/Replace, saving).
+
+17. AllStats, AllStats.lua: no overlap with the DrakeishUI character window
+   Symptom: with DrakeishUI the AllStats stat list and its Stats-> button were drawn on top of the new stats sidebar.
+   Cause: AllStats hangs its frames off the stock character-window edge, which is inside the wider DrakeishUI window.
+   Fix: when the DrakeishUI stats pane exists, the AllStats list and Stats-> button stay hidden (DrakeishUI shows the same
+   stats) and the Smart Stat Notes toggle and panel move to the right edge of the character window. Without DrakeishUI
+   nothing changes.
+   Status: confirmed in play with DrakeishUI.
 
 Credit: the Questie map-icon fixes (items 4b and 4c, 5, 6 and 7) are by Grandpa_Boris.
 

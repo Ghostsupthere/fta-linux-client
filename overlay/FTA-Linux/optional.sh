@@ -6,7 +6,7 @@
 #   FTA-Linux/optional.sh remove ID        take the piece out of the client; later updates leave it out
 #   FTA-Linux/optional.sh restore ID       bring a piece back that was taken out here (offline)
 #
-# Pieces (ID): murloc, realmdesk, bodyshape, clickguard, modelfix, fixes, texture. Nothing is deleted. Whatever is taken out is moved to
+# Pieces (ID): murloc, realmdesk, bodyshape, clickguard, modelfix, drakeish, flamestrike, fixes, texture. Nothing is deleted. Whatever is taken out is moved to
 # FTA-Linux/removed/<date-time>/ (or into $FTA_REMOVED_DIR when that is set, which uninstall.sh does), so it can be
 # put back or deleted by hand. States: installed, removed (taken out here or opted out; the installer will not add it
 # again by itself), absent (never added).
@@ -30,6 +30,8 @@ title() {
         bodyshape) printf 'Body Shape sliders' ;;
         clickguard) printf 'Bot Click Guard' ;;
         modelfix) printf 'Model bounds fix' ;;
+        drakeish) printf 'DrakeishUI interface' ;;
+        flamestrike) printf 'Flamestrike fix' ;;
         fixes)    printf 'Addon fixes' ;;
         texture)  printf 'Sharper character skins' ;;
         *) return 1 ;;
@@ -42,6 +44,8 @@ describe() {
         bodyshape) printf 'Character build sliders (/bs): height, build, face, and for female characters breast and butt. Your settings in WTF are kept.' ;;
         clickguard) printf 'NetherBot Click Guard (/nbcg): your NPCBots stop catching right-clicks meant for the world; hold a key to click one. Click-through needs this client build.' ;;
         modelfix) printf 'Corrects the animation bounds of 17 HD world models (Data/patch-YF.mpq, 0.9 MB) that the game could not click or kept hiding, such as the Heartswood quest tree. Changes nothing else.' ;;
+        drakeish) printf 'The modern interface (action bars, bags, character window, talents, map). The default of this client; ElvUI and Tukui are switched off at login while it is used. About 217 MB. Your settings in WTF are kept.' ;;
+        flamestrike) printf 'Flamestrike ranks 2-9 stop playing a male voice line and stand with their hands down (Data/patch-Z9.mpq and patch-ZY.mpq, 5 MB). Replaces the whole Spell.dbc, so it must be rebuilt when the realm changes that table.' ;;
         fixes)    printf 'Small fixes to a few addons that misbehave on Linux. Taking them out puts your original files back.' ;;
         texture)  printf 'Sets componentTextureLevel 9 in WTF/Config.wtf (512x512 character skins). Costs a little video memory.' ;;
         *) return 1 ;;
@@ -70,6 +74,14 @@ state() { # state ID: installed | removed | absent
             [[ -f $client/Data/patch-YF.mpq ]] && { printf installed; return; }
             [[ -f $state_dir/no-modelfix ]] && { printf removed; return; }
             printf absent ;;
+        drakeish)
+            [[ -f $client/Interface/AddOns/DrakeishUI/DrakeishUI.toc ]] && { printf installed; return; }
+            [[ -f $state_dir/no-drakeish ]] && { printf removed; return; }
+            printf absent ;;
+        flamestrike)
+            [[ -f $client/Data/patch-Z9.mpq && -f $client/Data/patch-ZY.mpq ]] && { printf installed; return; }
+            [[ -f $state_dir/no-flamestrike ]] && { printf removed; return; }
+            printf absent ;;
         fixes)
             [[ -d $state_dir/addon-fix-backup || -f $state_dir/addon-fix-new-files.txt ]] && { printf installed; return; }
             printf absent ;;
@@ -80,7 +92,7 @@ state() { # state ID: installed | removed | absent
     esac
 }
 
-ids="murloc realmdesk bodyshape clickguard modelfix fixes texture"
+ids="murloc realmdesk bodyshape clickguard modelfix drakeish flamestrike fixes texture"
 valid() { case " $ids " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 
 game_running() { pgrep -x Wow64 >/dev/null 2>&1; }
@@ -154,6 +166,26 @@ cmd_remove() {
             fi
             : >"$state_dir/no-modelfix"
             printf 'Updates will leave it out. The HD tree, tents and the rest of the 17 models go back to their broken bounds (some cannot be clicked).\n' ;;
+        drakeish)
+            if [[ -d $client/Interface/AddOns/DrakeishUI ]]; then
+                dir=$(new_removed_dir); mv -- "$client/Interface/AddOns/DrakeishUI" "$dir/DrakeishUI"
+                printf 'Moved Interface/AddOns/DrakeishUI to %s (your settings stay in WTF)\n' "$dir"
+            else
+                printf 'DrakeishUI is not installed here.\n'
+            fi
+            : >"$state_dir/no-drakeish"
+            printf 'Updates will leave DrakeishUI out. The game falls back to the stock interface, or ElvUI where it is enabled for a character.\n' ;;
+        flamestrike)
+            if [[ -f $client/Data/patch-Z9.mpq || -f $client/Data/patch-ZY.mpq ]]; then
+                dir=$(new_removed_dir)
+                [[ ! -f $client/Data/patch-Z9.mpq ]] || mv -- "$client/Data/patch-Z9.mpq" "$dir/patch-Z9.mpq"
+                [[ ! -f $client/Data/patch-ZY.mpq ]] || mv -- "$client/Data/patch-ZY.mpq" "$dir/patch-ZY.mpq"
+                printf 'Moved Data/patch-Z9.mpq and Data/patch-ZY.mpq to %s\n' "$dir"
+            else
+                printf 'The Flamestrike fix is not installed here.\n'
+            fi
+            : >"$state_dir/no-flamestrike"
+            printf 'Updates will leave it out.\n' ;;
         fixes)
             [[ -d $state_dir/addon-fix-backup || -f $state_dir/addon-fix-new-files.txt ]] || { printf 'No addon fixes were applied here.\n'; return 0; }
             dir=$(new_removed_dir)
@@ -230,6 +262,17 @@ cmd_restore() {
             dir=$(latest_removed_with patch-YF.mpq) || { printf 'No copy of the model bounds fix is kept here. Run FTA-Linux-Installer.run --modelfix to add it.\n'; return 3; }
             mv -- "$dir/patch-YF.mpq" "$client/Data/patch-YF.mpq"; rm -f -- "$state_dir/no-modelfix"
             printf 'Put Data/patch-YF.mpq back.\n' ;;
+        drakeish)
+            [[ -d $client/Interface/AddOns/DrakeishUI ]] && { printf 'DrakeishUI is already installed.\n'; return 0; }
+            dir=$(latest_removed_with DrakeishUI) || { printf 'No copy of DrakeishUI is kept here. Run FTA-Linux-Installer.run --drakeish to add it.\n'; return 3; }
+            mv -- "$dir/DrakeishUI" "$client/Interface/AddOns/DrakeishUI"; rm -f -- "$state_dir/no-drakeish"
+            printf 'Put DrakeishUI back. Restart the game completely so it finds the files.\n' ;;
+        flamestrike)
+            [[ -f $client/Data/patch-Z9.mpq && -f $client/Data/patch-ZY.mpq ]] && { printf 'The Flamestrike fix is already installed.\n'; return 0; }
+            dir=$(latest_removed_with patch-Z9.mpq) || { printf 'No copy of the Flamestrike fix is kept here. Run FTA-Linux-Installer.run --flamestrike to add it.\n'; return 3; }
+            [[ -f $dir/patch-ZY.mpq ]] || { printf 'The kept copy is incomplete (patch-ZY.mpq is missing). Run FTA-Linux-Installer.run --flamestrike to add it.\n'; return 3; }
+            mv -- "$dir/patch-Z9.mpq" "$client/Data/patch-Z9.mpq"; mv -- "$dir/patch-ZY.mpq" "$client/Data/patch-ZY.mpq"; rm -f -- "$state_dir/no-flamestrike"
+            printf 'Put the Flamestrike fix back (restart the game).\n' ;;
         fixes)
             printf 'Addon fixes come with the installer: run FTA-Linux-Installer.run and answer yes to review them.\n'; return 3 ;;
         texture)

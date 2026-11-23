@@ -96,13 +96,16 @@ for optional_addon in FTAQuestTracker FTA_Resilience; do
     cp -a -- "$src" "$stage/FTA-Addons/$optional_addon"
     printf 'Optional addon bundled: %s\n' "$optional_addon"
 done
+if [[ -z ${DRAKEISHUI_DIR:-} && -n ${RELEASE_TAG:-} && -z ${NO_DRAKEISHUI:-} ]]; then
+    fail 'a release carries DrakeishUI (the default interface): set DRAKEISHUI_DIR to the generated package (tools/package-drakeishui.py in the engine repository), or NO_DRAKEISHUI=1 to leave it out on purpose'
+fi
 if [[ -n ${DRAKEISHUI_DIR:-} ]]; then
     src=$DRAKEISHUI_DIR
     [[ -f $src/DrakeishUI.toc && -f $src/SelectivePackageManifest.json ]] || fail "DRAKEISHUI_DIR must contain the generated addon package"
     [[ $(tr -d '\r' < "$src/DrakeishUI.toc" | sed -n 's/^## LoadOnDemand: *//p') == 1 ]] || fail "DrakeishUI must load only on demand"
     mkdir -p -- "$stage/FTA-Addons"
     cp -a -- "$src" "$stage/FTA-Addons/DrakeishUI"
-    printf 'Optional addon bundled: DrakeishUI\n'
+    printf 'Addon bundled: DrakeishUI (%s files)\n' "$(find "$src" -type f | wc -l)"
 fi
 # The model bounds fix (Data/patch-YF.mpq, see data/README.md) travels inside the installer as FTA-Data/.
 if [[ -f $repo/data/patch-YF.mpq ]]; then
@@ -111,6 +114,14 @@ if [[ -f $repo/data/patch-YF.mpq ]]; then
     printf 'Data pack bundled: patch-YF.mpq (model bounds fix)\n'
 else
     printf 'No data/patch-YF.mpq in %s; the installer will not carry the model bounds fix.\n' "$repo"
+fi
+# The Flamestrike fix: two whole-table DBC patches, always shipped together (see data/README.md).
+if [[ -f $repo/data/patch-Z9.mpq && -f $repo/data/patch-ZY.mpq ]]; then
+    mkdir -p -- "$stage/FTA-Data"
+    cp -- "$repo/data/patch-Z9.mpq" "$repo/data/patch-ZY.mpq" "$stage/FTA-Data/"
+    printf 'Data pack bundled: patch-Z9.mpq + patch-ZY.mpq (Flamestrike fix)\n'
+else
+    printf 'No Flamestrike pair in %s/data; the installer will not carry it.\n' "$repo"
 fi
 chmod +x "$stage/install.sh" "$stage/payload/Wow64" "$stage/payload/FTA-Linux/play.sh" "$stage/payload/FTA-Linux/install-deps.sh" \
     "$stage/payload/FTA-Linux/optional.sh" "$stage/payload/FTA-Linux/uninstall.sh"

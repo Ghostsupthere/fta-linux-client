@@ -2,9 +2,9 @@
 # Install the native Linux client overlay into a From The Ashes base client folder.
 #   ./install.sh                      installs into the folder you run it from (open a terminal in your client folder)
 #   ./install.sh /path/to/client      installs into that folder instead
-#   add --force to replace shader packs that are already there
+#   --force is accepted and does nothing now: the shader packs and the lamp catalog are always brought up to date
 # Adds Wow64, the FTA-Linux folder and the offline shader packs. Nothing the Windows client uses is changed;
-# shader packs and WarcraftXL.cfg that are already there are kept unless --force is given.
+# the shader packs and the lamp catalog (ours) are replaced when they differ; WarcraftXL.cfg and everything else you own is kept.
 set -euo pipefail
 
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
@@ -32,17 +32,20 @@ done
 # Overwrite our own files (Wow64, FTA-Linux); keep anything else that exists unless --force. The backups the
 # launcher and the installer made of the person's own files, and their debug switches, survive a reinstall.
 if [[ -d $target/FTA-Linux ]]; then
-    find "$target/FTA-Linux" -mindepth 1 -maxdepth 1 ! -name settings-backup ! -name addon-fix-backup ! -name addon-fix-new-files.txt ! -name debug.env ! -name murloc-backup ! -name no-murloc ! -name no-realmdesk ! -name realmdesk-backup ! -name no-bodyshape ! -name bodyshape-backup ! -name no-clickguard ! -name clickguard-backup ! -name no-modelfix ! -name modelfix-backup ! -name texture-level-set ! -name Config.wtf.before-texture-level ! -name removed -exec rm -rf -- {} +
+    find "$target/FTA-Linux" -mindepth 1 -maxdepth 1 ! -name settings-backup ! -name addon-fix-backup ! -name addon-fix-new-files.txt ! -name debug.env ! -name murloc-backup ! -name no-murloc ! -name no-realmdesk ! -name realmdesk-backup ! -name no-bodyshape ! -name bodyshape-backup ! -name no-clickguard ! -name clickguard-backup ! -name no-modelfix ! -name modelfix-backup ! -name no-drakeish ! -name drakeish-backup ! -name no-flamestrike ! -name flamestrike-backup ! -name texture-level-set ! -name Config.wtf.before-texture-level ! -name removed -exec rm -rf -- {} +
 else
     mkdir -p -- "$target/FTA-Linux"
 fi
 cp -r -- "$here/payload/FTA-Linux/." "$target/FTA-Linux/"
 cp -f -- "$here/payload/Wow64" "$target/Wow64"
 mkdir -p -- "$target/Utils/WarcraftXL/visuals"
-for pack in "$here"/payload/Utils/WarcraftXL/visuals/*.pack; do
+# The shader packs and the lamp catalog are our own files and change between releases: replace them whenever they differ,
+# so an update never leaves a stale pack next to a newer game.
+for pack in "$here"/payload/Utils/WarcraftXL/visuals/*.pack "$here"/payload/Utils/WarcraftXL/visuals/*.csv; do
     [[ -f $pack ]] || continue
-    if (( force )) || [[ ! -e $target/Utils/WarcraftXL/visuals/$(basename "$pack") ]]; then
-        cp -f -- "$pack" "$target/Utils/WarcraftXL/visuals/"
+    dest=$target/Utils/WarcraftXL/visuals/$(basename "$pack")
+    if [[ ! -e $dest ]] || ! cmp -s -- "$pack" "$dest"; then
+        cp -f -- "$pack" "$dest.new" && mv -f -- "$dest.new" "$dest"
     fi
 done
 chmod +x "$target/Wow64" "$target/FTA-Linux/play.sh" "$target/FTA-Linux/install-deps.sh"

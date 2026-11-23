@@ -16,3 +16,4 @@ Interface/AddOns/ncBiggerMacros/ncBiggerMacros.lua	ncBiggerMacros: steps aside w
 Interface/AddOns/Blizzard_MacroUI/Blizzard_MacroUI.lua	Macro window (new file): macros up to 2048 characters, counter, Save
 Interface/AddOns/Blizzard_MacroUI/Blizzard_MacroUI.xml	Macro window (new file): layout for the above
 Interface/AddOns/Blizzard_MacroUI/FTA_MacroEditor.lua	Macro window (new file): expanded editor with Undo/Redo, syntax preview, Check, Complete, Duplicate, Find/Replace
+Interface/AddOns/AllStats/AllStats.lua	AllStats: with DrakeishUI the stat list and Stats-> button stay hidden and the notes panel moves to the character window edge
