@@ -524,7 +524,7 @@ install_optional_native_addon() {
     rm -rf -- "$staged"
     return 1
 }
-for optional_addon in FTAQuestTracker FTA_Resilience; do
+for optional_addon in FTAQuestTracker FTA_Resilience DrakeishUI; do
     install_optional_native_addon "$optional_addon" || printf 'Optional addon left as-is: %s\n' "$optional_addon"
 done
 

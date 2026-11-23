@@ -96,6 +96,14 @@ for optional_addon in FTAQuestTracker FTA_Resilience; do
     cp -a -- "$src" "$stage/FTA-Addons/$optional_addon"
     printf 'Optional addon bundled: %s\n' "$optional_addon"
 done
+if [[ -n ${DRAKEISHUI_DIR:-} ]]; then
+    src=$DRAKEISHUI_DIR
+    [[ -f $src/DrakeishUI.toc && -f $src/SelectivePackageManifest.json ]] || fail "DRAKEISHUI_DIR must contain the generated addon package"
+    [[ $(tr -d '\r' < "$src/DrakeishUI.toc" | sed -n 's/^## LoadOnDemand: *//p') == 1 ]] || fail "DrakeishUI must load only on demand"
+    mkdir -p -- "$stage/FTA-Addons"
+    cp -a -- "$src" "$stage/FTA-Addons/DrakeishUI"
+    printf 'Optional addon bundled: DrakeishUI\n'
+fi
 # The model bounds fix (Data/patch-YF.mpq, see data/README.md) travels inside the installer as FTA-Data/.
 if [[ -f $repo/data/patch-YF.mpq ]]; then
     mkdir -p -- "$stage/FTA-Data"
