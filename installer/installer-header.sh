@@ -48,8 +48,8 @@ LOGIN_SCREENS_SHA256=a03c6881b1ece9525020972ffbcc3f510f6b9d58c94a166b800f0d13179
 # DrakeishUI (the default interface, FTA-DrakeishUI.zip, 55 MB) is a separate download too, so it can be updated without a new release. It is kept on Google
 # Drive; the file carries its own SelectivePackageManifest.json (size and sha256 of every file) and nothing is installed unless every file matches it.
 # Replace the file on Drive (same link, "Manage versions") to update it; players get the new files with the installer's --drakeish.
-DRAKEISHUI_URL=''
-DRAKEISHUI_ID=''
+DRAKEISHUI_URL='https://drive.google.com/file/d/1U-9MGatVyDBFxtAgFuWdgnhb7OYIM1VB/view?usp=sharing'
+DRAKEISHUI_ID=1U-9MGatVyDBFxtAgFuWdgnhb7OYIM1VB
 
 # The Murloc race patch (patch-ZD.mpq, about 12 MB: the custom playable Murloc race of the From The Ashes realm) is a separate download too,
 # because it carries game models and textures. The file must match this checksum or nothing is installed from it.
