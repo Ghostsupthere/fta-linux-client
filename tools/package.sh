@@ -96,8 +96,12 @@ for optional_addon in FTAQuestTracker FTA_Resilience; do
     cp -a -- "$src" "$stage/FTA-Addons/$optional_addon"
     printf 'Optional addon bundled: %s\n' "$optional_addon"
 done
+# DrakeishUI (the default interface) is normally NOT bundled: the installer downloads FTA-DrakeishUI.zip from Google Drive (DRAKEISHUI_ID in
+# installer/installer-header.sh). A release therefore needs that link filled in. DRAKEISHUI_DIR bundles the generated package instead (for a test installer
+# that must work offline); NO_DRAKEISHUI=1 releases without a link on purpose.
 if [[ -z ${DRAKEISHUI_DIR:-} && -n ${RELEASE_TAG:-} && -z ${NO_DRAKEISHUI:-} ]]; then
-    fail 'a release carries DrakeishUI (the default interface): set DRAKEISHUI_DIR to the generated package (tools/package-drakeishui.py in the engine repository), or NO_DRAKEISHUI=1 to leave it out on purpose'
+    grep -q "^DRAKEISHUI_ID='\?[A-Za-z0-9_-]\+" "$repo/installer/installer-header.sh" \
+        || fail 'a release needs the DrakeishUI download link: set DRAKEISHUI_URL and DRAKEISHUI_ID in installer/installer-header.sh (upload FTA-DrakeishUI.zip to Google Drive first), or set NO_DRAKEISHUI=1 to leave it out on purpose'
 fi
 if [[ -n ${DRAKEISHUI_DIR:-} ]]; then
     src=$DRAKEISHUI_DIR

@@ -19,7 +19,7 @@
 #   --murloc         download the Murloc race patch (about 13 MB from Google Drive) without asking
 #   --no-murloc      do not install the Murloc race patch, now or in later updates (the launcher's Update remembers this)
 #   --murloc-file F  install the Murloc patch from this local patch-ZD.mpq instead of downloading it
-#   --no-texture-level  do not set componentTextureLevel 9 in WTF/Config.wtf (see the Murloc skins below)
+#   --no-texture-level  do not set componentTextureLevel 10 in WTF/Config.wtf (see the Murloc skins below)
 #   --no-realmdesk   do not install the RealmDesk addon (support tickets), now or in later updates
 #   --realmdesk      install RealmDesk even if you opted out earlier
 #   --no-bodyshape   do not install the Body Shape addon (/bs sliders), now or in later updates
@@ -28,8 +28,9 @@
 #   --clickguard     install it even if you opted out earlier
 #   --no-modelfix    do not install the model bounds fix (Data/patch-YF.mpq), now or in later updates
 #   --modelfix       install it even if you opted out earlier
-#   --no-drakeish    do not install the DrakeishUI interface (about 217 MB installed), now or in later updates
-#   --drakeish       install it even if you opted out earlier
+#   --no-drakeish    do not install the DrakeishUI interface (55 MB download, 217 MB installed), now or in later updates
+#   --drakeish       install or refresh it (downloads it again), even if you opted out earlier
+#   --drakeish-file F  install DrakeishUI from this local FTA-DrakeishUI.zip instead of downloading it
 #   --no-flamestrike do not install the Flamestrike fix (Data/patch-Z9.mpq and patch-ZY.mpq), now or in later updates
 #   --flamestrike    install it even if you opted out earlier
 #   --update         for the launcher's Update button: no questions, no sudo, no terminal; keeps the shortcut
@@ -44,6 +45,12 @@ LOGIN_SCREENS_URL='https://drive.google.com/file/d/13WPuTZ77LCYdlWmD3Ia8pWvgxXBa
 LOGIN_SCREENS_ID=13WPuTZ77LCYdlWmD3Ia8pWvgxXBau5E-
 LOGIN_SCREENS_SHA256=a03c6881b1ece9525020972ffbcc3f510f6b9d58c94a166b800f0d13179040d3
 
+# DrakeishUI (the default interface, FTA-DrakeishUI.zip, 55 MB) is a separate download too, so it can be updated without a new release. It is kept on Google
+# Drive; the file carries its own SelectivePackageManifest.json (size and sha256 of every file) and nothing is installed unless every file matches it.
+# Replace the file on Drive (same link, "Manage versions") to update it; players get the new files with the installer's --drakeish.
+DRAKEISHUI_URL=''
+DRAKEISHUI_ID=''
+
 # The Murloc race patch (patch-ZD.mpq, about 12 MB: the custom playable Murloc race of the From The Ashes realm) is a separate download too,
 # because it carries game models and textures. The file must match this checksum or nothing is installed from it.
 MURLOC_PATCH_URL='https://drive.google.com/file/d/1r84grn0yiBx3A063Vl-5wrkK9rwi2gm0/view?usp=sharing'
@@ -52,7 +59,7 @@ MURLOC_PATCH_SHA256=df580c5ef1afaa8f31e6c962b0490e04ad8c940e3f6818c6cf9adb51d2fb
 
 self=$(readlink -f -- "$0")
 ORIGINAL_ARGS="$*"
-client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" texture_level=1 realmdesk=auto bodyshape=auto clickguard=auto modelfix=auto drakeish=auto flamestrike=auto
+client="" assume=0 shortcut=1 interm=0 pause=0 fixes_path="" use_fixes=1 update=0 login_dl=ask murloc_dl=ask murloc_file="" texture_level=1 realmdesk=auto bodyshape=auto clickguard=auto modelfix=auto drakeish=auto drakeish_file="" flamestrike=auto
 out_tty=0; [[ -t 1 ]] && out_tty=1   # the log below replaces stdout, so ask now
 while (( $# )); do
     case $1 in
@@ -74,6 +81,7 @@ while (( $# )); do
         --no-modelfix) modelfix=no ;;
         --drakeish) drakeish=yes ;;
         --no-drakeish) drakeish=no ;;
+        --drakeish-file) drakeish_file=${2:?--drakeish-file needs an FTA-DrakeishUI.zip}; drakeish=yes; shift ;;
         --flamestrike) flamestrike=yes ;;
         --no-flamestrike) flamestrike=no ;;
         --murloc) murloc_dl=yes ;;
@@ -82,7 +90,7 @@ while (( $# )); do
         --update) update=1; assume=1; interm=1 ;;
         --in-terminal) interm=1 ;;
         --pause) pause=1 ;;
-        --help|-h) sed -n '2,34p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --help|-h) sed -n '2,37p' "$self" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
     esac
     shift
@@ -107,7 +115,8 @@ if (( ! interm )) && [[ ! -t 0 || ! -t 1 ]]; then
     [[ $clickguard == no ]] && relaunch+=(--no-clickguard)
     [[ $modelfix == yes ]] && relaunch+=(--modelfix)
     [[ $modelfix == no ]] && relaunch+=(--no-modelfix)
-    [[ $drakeish == yes ]] && relaunch+=(--drakeish)
+    [[ $drakeish == yes && -z $drakeish_file ]] && relaunch+=(--drakeish)
+    [[ -n $drakeish_file ]] && relaunch+=(--drakeish-file "$drakeish_file")
     [[ $drakeish == no ]] && relaunch+=(--no-drakeish)
     [[ $flamestrike == yes ]] && relaunch+=(--flamestrike)
     [[ $flamestrike == no ]] && relaunch+=(--no-flamestrike)
@@ -540,16 +549,40 @@ for optional_addon in FTAQuestTracker FTA_Resilience; do
     install_optional_native_addon "$optional_addon" || printf 'Optional addon left as-is: %s\n' "$optional_addon"
 done
 
+drive_fetch() { # drive_fetch FILE_ID OUTFILE: downloads a public Google Drive file (big files skip the scan page with confirm=t)
+    curl -fsS -L --retry 3 --max-time 3600 -o "$2" "https://drive.usercontent.google.com/download?id=$1&export=download&confirm=t"
+}
+unpack_zip() { # unpack_zip ZIP DIR: unzip, python3 or bsdtar, whichever is installed
+    if command -v unzip >/dev/null 2>&1; then unzip -q -o "$1" -d "$2" >/dev/null 2>&1
+    elif command -v python3 >/dev/null 2>&1; then python3 -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$1" "$2" 2>/dev/null
+    elif command -v bsdtar >/dev/null 2>&1; then bsdtar -xf "$1" -C "$2" 2>/dev/null
+    else return 1; fi
+}
+
 # ---- DrakeishUI interface ------------------------------------------------------------------------
-# DrakeishUI is the modern interface (action bars, bags, character window, talents, map ...) and the default one of this client. It travels inside this
-# installer as FTA-Addons/DrakeishUI and is copied to Interface/AddOns/DrakeishUI. It is load-on-demand: the game loads it at login when "Interface style" is
-# DrakeishUI (Interface > Game). Its saved variables live in WTF, so an update only replaces the addon's own files; a replaced file is first kept in
-# FTA-Linux/drakeish-backup/. --no-drakeish skips it and is remembered (FTA-Linux/no-drakeish) so later updates leave it out; --drakeish installs it again.
-# The game only finds files that exist when it starts, so the game has to be restarted after this step.
+# DrakeishUI is the modern interface (action bars, bags, character window, talents, map ...) and the default one of this client. It is a separate download
+# (FTA-DrakeishUI.zip, 55 MB, Google Drive, see DRAKEISHUI_ID above) or a local zip given with --drakeish-file, and is copied to Interface/AddOns/DrakeishUI. A copy
+# bundled in this installer as FTA-Addons/DrakeishUI is used instead when there is one. It is load-on-demand: the game loads it at login when "Interface style" is
+# DrakeishUI (Interface > Game). Its saved variables live in WTF. A new install downloads it; an update leaves an installed copy alone (it is maintained separately),
+# and --drakeish fetches the current one and replaces only the files that differ, each first kept in FTA-Linux/drakeish-backup/. --no-drakeish skips it and is remembered
+# (FTA-Linux/no-drakeish) so later updates leave it out. The game only finds files that exist when it starts, so it has to be restarted after this step.
+drakeish_manual() {
+    printf 'To add it by hand: download %s\nand extract it inside %s/Interface/AddOns, so the files are in Interface/AddOns/DrakeishUI. Or run this installer with --drakeish-file FTA-DrakeishUI.zip.\n' "${DRAKEISHUI_URL:-FTA-DrakeishUI.zip (the link is in the download notes)}" "$client"
+}
+drakeish_verify() { # drakeish_verify DIR: every file listed in SelectivePackageManifest.json has its sha256
+    local d=$1 bad
+    [[ -f $d/DrakeishUI.toc && -f $d/SelectivePackageManifest.json ]] || return 1
+    [[ $(tr -d '\r' < "$d/DrakeishUI.toc" | sed -n 's/^## LoadOnDemand: *//p') == 1 ]] || return 1
+    command -v sha256sum >/dev/null 2>&1 || return 1
+    awk -F'"' '/"path":/ { p = $4 } /"sha256":/ { print $4 "  " p }' "$d/SelectivePackageManifest.json" > "$d/.sums" || return 1
+    [[ -s $d/.sums ]] || return 1
+    bad=$(cd -- "$d" && sha256sum -c --quiet .sums 2>&1 | head -3) || true
+    rm -f -- "$d/.sums"
+    [[ -z $bad ]]
+}
 drakeish_install() {
-    local src=$tmp/FTA-Addons/DrakeishUI dest=$client/Interface/AddOns/DrakeishUI marker=$client/FTA-Linux/no-drakeish
+    local src="" dest=$client/Interface/AddOns/DrakeishUI marker=$client/FTA-Linux/no-drakeish dl="" free
     local file rel cur new=0 changed=0 same=0 bk="" total
-    [[ -f $src/DrakeishUI.toc ]] || { printf '\nDrakeishUI: not bundled with this installer.\n'; return 0; }
     if [[ $drakeish == no ]]; then
         mkdir -p -- "$client/FTA-Linux" && : >"$marker" || true
         printf '\nDrakeishUI: not installed; later updates leave it out too (run with --drakeish to change that).\n'; return 0
@@ -558,12 +591,48 @@ drakeish_install() {
     elif [[ -f $marker ]]; then
         printf '\nDrakeishUI: left out (you opted out earlier). Run the installer by hand with --drakeish to add it.\n'; return 0
     fi
+    if [[ -f $tmp/FTA-Addons/DrakeishUI/DrakeishUI.toc ]]; then
+        src=$tmp/FTA-Addons/DrakeishUI
+    else
+        if [[ -f $dest/DrakeishUI.toc && $drakeish != yes ]]; then
+            printf '\nDrakeishUI: installed; an update leaves it alone (it is updated separately). Run the installer with --drakeish to fetch the current one.\n'; return 0
+        fi
+        printf '\nDrakeishUI: the modern interface (action bars, bags, character window, talents, map), the default of this client.\n'
+        printf 'It is a separate download of 55 MB (217 MB installed) and goes into Interface/AddOns/DrakeishUI. Without it the game keeps the stock interface or ElvUI.\n'
+        if [[ -z $drakeish_file && -z $DRAKEISHUI_ID ]]; then
+            printf 'This installer has no download link for it yet.\n'; drakeish_manual; return 0
+        fi
+        if [[ $drakeish != yes ]] && ! (( update )) && ! ask 'Download and install it now?' Y; then
+            printf 'Skipped. Run the installer with --drakeish to add it later.\n'; return 0
+        fi
+        dl=$(mktemp -d -p "$client/Data" .fta-drakeish-download.XXXXXX) || { printf 'Cannot write to %s/Data.\n' "$client"; return 0; }
+        free=$(df -Pk -- "$client/Data" 2>/dev/null | awk 'NR==2 { print int($4 / 1024) }')
+        if [[ -n $free ]] && (( free < 600 )); then printf 'Not enough free space in %s/Data (%s MB free, about 600 MB needed).\n' "$client" "$free"; rm -rf -- "$dl"; return 0; fi
+        if [[ -n $drakeish_file ]]; then
+            [[ -f $drakeish_file ]] || { printf 'Local file %s does not exist.\n' "$drakeish_file"; rm -rf -- "$dl"; return 0; }
+            cp -- "$drakeish_file" "$dl/drakeish.zip" || { rm -rf -- "$dl"; return 0; }
+        else
+            command -v curl >/dev/null 2>&1 || { printf 'Cannot download it here: curl is not installed.\n'; drakeish_manual; rm -rf -- "$dl"; return 0; }
+            printf 'Downloading (a minute or two)...\n'
+            if ! drive_fetch "$DRAKEISHUI_ID" "$dl/drakeish.zip"; then
+                printf 'The download failed (no network, or Google Drive refused it, for example when the daily download limit is reached).\n'; drakeish_manual; rm -rf -- "$dl"; return 0
+            fi
+        fi
+        mkdir -p -- "$dl/x"
+        if ! unpack_zip "$dl/drakeish.zip" "$dl/x"; then
+            printf 'The archive could not be unpacked (it needs unzip, python3 or bsdtar, and a complete download).\n'; drakeish_manual; rm -rf -- "$dl"; return 0
+        fi
+        src=$dl/x/DrakeishUI
+        if ! drakeish_verify "$src"; then
+            printf 'The downloaded DrakeishUI does not match its own file list, so it was not installed.\n'; drakeish_manual; rm -rf -- "$dl"; return 0
+        fi
+    fi
     [[ -d $dest ]] || new=1
     total=$(find "$src" -type f | wc -l)
-    printf '\nDrakeishUI: checking %d files ...\n' "$total"
+    printf 'DrakeishUI: checking %d files ...\n' "$total"
     while IFS= read -r -d '' file; do
         rel=${file#"$src"/}
-        mkdir -p -- "$dest/$(dirname -- "$rel")" || { printf 'Could not write %s.\n' "$dest"; return 0; }
+        mkdir -p -- "$dest/$(dirname -- "$rel")" || { printf 'Could not write %s.\n' "$dest"; break; }
         if [[ -f $dest/$rel && $(stat -c %s -- "$dest/$rel") == "$(stat -c %s -- "$file")" ]]; then
             cur=$(hash_of "$dest/$rel")
             if [[ $cur == "$(hash_of "$file")" ]]; then same=$((same + 1)); continue; fi
@@ -575,6 +644,7 @@ drakeish_install() {
         cp -f -- "$file" "$dest/$rel.new" && mv -f -- "$dest/$rel.new" "$dest/$rel" || { rm -f -- "$dest/$rel.new"; printf 'Could not write %s.\n' "$dest/$rel"; continue; }
         changed=$((changed + 1))
     done < <(find "$src" -type f -print0 | sort -z)
+    [[ -z $dl ]] || rm -rf -- "$dl"
     if (( new )); then printf 'DrakeishUI installed (%d files) into Interface/AddOns/DrakeishUI.\n' "$changed"
     else printf 'DrakeishUI updated: %d file(s) replaced, %d already current.\n' "$changed" "$same"; fi
     [[ -z $bk ]] || printf 'Replaced files kept in %s\n' "$bk"
@@ -646,9 +716,6 @@ flamestrike_install || printf 'The Flamestrike fix could not be set up (the inst
 # A separate download (about 207 MB) kept on Google Drive: ten small packs, installed as
 # Data/LoginScreens/login-<name>.mpq, that the launcher's Login tab chooses between. The result must match
 # LOGIN_SCREENS_SHA256, and only files named login-*.mpq are copied out of it. Nothing here can make the install fail.
-drive_fetch() { # drive_fetch FILE_ID OUTFILE: downloads a public Google Drive file (big files skip the scan page with confirm=t)
-    curl -fsS -L --retry 3 --max-time 3600 -o "$2" "https://drive.usercontent.google.com/download?id=$1&export=download&confirm=t"
-}
 login_screens_manual() {
     printf 'To add them by hand: download %s\nand extract the archive inside %s/Data, so the files are in Data/LoginScreens/.\n' "$LOGIN_SCREENS_URL" "$client"
 }
@@ -762,13 +829,13 @@ fi
 
 # ---- character texture size ----------------------------------------------------------------------
 # The game builds every character skin in a working picture whose size is the console variable componentTextureLevel: the default 8 means
-# 256x256, 9 means 512x512. Higher resolution character skins (the Murloc skins) only show their detail at 9. Once per client folder (a marker
-# file FTA-Linux/texture-level-set records it), this adds SET componentTextureLevel "9" to WTF/Config.wtf, only if the file exists and does not
+# 256x256, 9 means 512x512 and 10 means 1024x1024 (this client's own 1024 atlas). Higher resolution character skins (the Murloc skins) only show their detail from 9 up.
+# Once per client folder (a marker file FTA-Linux/texture-level-set records it), this adds SET componentTextureLevel "10" to WTF/Config.wtf, only if the file exists and does not
 # mention the variable. Nothing already in the file is changed; later changes by the player are never overwritten. --no-texture-level skips it.
 texture_level_apply() {
     local cfg=$client/WTF/Config.wtf marker=$client/FTA-Linux/texture-level-set eol=$'\n'
     [[ -f $marker ]] && return 0
-    [[ -f $cfg ]] || { printf '\nCharacter textures: no WTF/Config.wtf yet (start the game once), so componentTextureLevel is left at the default. Type /console componentTextureLevel 9 in game for sharper character skins.\n'; return 0; }
+    [[ -f $cfg ]] || { printf '\nCharacter textures: no WTF/Config.wtf yet (start the game once), so componentTextureLevel is left at the default. Type /console componentTextureLevel 10 in game for sharper character skins.\n'; return 0; }
     if grep -qi 'componentTextureLevel' "$cfg"; then
         printf '\nCharacter textures: componentTextureLevel is already set in Config.wtf; left alone.\n'
         : >"$marker"; return 0
@@ -776,9 +843,9 @@ texture_level_apply() {
     grep -q $'\r' "$cfg" && eol=$'\r\n'
     cp -p -- "$cfg" "$client/FTA-Linux/Config.wtf.before-texture-level" 2>/dev/null || true
     [[ -s $cfg && $(tail -c1 "$cfg" | od -An -c | tr -d ' ') != '\n' ]] && printf '%s' "$eol" >>"$cfg"
-    printf 'SET componentTextureLevel "9"%s' "$eol" >>"$cfg" || { printf 'Could not write %s.\n' "$cfg"; return 0; }
+    printf 'SET componentTextureLevel "10"%s' "$eol" >>"$cfg" || { printf 'Could not write %s.\n' "$cfg"; return 0; }
     : >"$marker"
-    printf '\nCharacter textures: set componentTextureLevel 9 in Config.wtf (512x512 character skins; the old file is kept as FTA-Linux/Config.wtf.before-texture-level). Undo with /console componentTextureLevel 8.\n'
+    printf '\nCharacter textures: set componentTextureLevel 10 in Config.wtf (1024x1024 character skins; the old file is kept as FTA-Linux/Config.wtf.before-texture-level). Undo with /console componentTextureLevel 8.\n'
 }
 if (( texture_level )); then
     texture_level_apply || printf 'The texture setting could not be applied (the install itself is fine).\n'

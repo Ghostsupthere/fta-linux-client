@@ -4,7 +4,7 @@
 #   FTA-Linux/uninstall.sh [--yes] [--delete] [--dry-run] [--purge-settings]
 #
 # Removes Wow64, the FTA-Linux folder and the menu shortcut, and puts back what the installer changed:
-#   - the Murloc patch (Data/patch-ZD.mpq), the RealmDesk and Body Shape addons, the login screens and the texture line in
+#   - the Murloc patch (Data/patch-ZD.mpq), the RealmDesk, Body Shape and DrakeishUI addons, the login screens and the texture line in
 #     WTF/Config.wtf are moved out of the client, and your original addon files are restored from the backups.
 # Nothing is deleted outright: what was moved out waits in FTA-Linux-removed-<date-time>/ next to Wow.exe. Delete that
 # folder when you are sure (--delete does it for you). Your WTF settings, saved variables, screenshots, the Windows

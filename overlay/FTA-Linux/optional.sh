@@ -18,7 +18,8 @@ here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 client=$(cd -- "$here/.." && pwd -P)
 state_dir=$client/FTA-Linux
 cfg=$client/WTF/Config.wtf
-tex_line='SET componentTextureLevel "9"'
+tex_line='SET componentTextureLevel "10"'
+tex_line_old='SET componentTextureLevel "9"'   # written by installers before the 1024 atlas
 
 fail() { printf 'optional: %s\n' "$*" >&2; exit 1; }
 [[ -f $state_dir/optional.sh ]] || fail 'this script must live in the FTA-Linux folder of a client'
@@ -47,7 +48,7 @@ describe() {
         drakeish) printf 'The modern interface (action bars, bags, character window, talents, map). The default of this client; ElvUI and Tukui are switched off at login while it is used. About 217 MB. Your settings in WTF are kept.' ;;
         flamestrike) printf 'Flamestrike ranks 2-9 stop playing a male voice line and stand with their hands down (Data/patch-Z9.mpq and patch-ZY.mpq, 5 MB). Replaces the whole Spell.dbc, so it must be rebuilt when the realm changes that table.' ;;
         fixes)    printf 'Small fixes to a few addons that misbehave on Linux. Taking them out puts your original files back.' ;;
-        texture)  printf 'Sets componentTextureLevel 9 in WTF/Config.wtf (512x512 character skins). Costs a little video memory.' ;;
+        texture)  printf 'Sets componentTextureLevel 10 in WTF/Config.wtf (1024x1024 character skins). Costs some video memory.' ;;
         *) return 1 ;;
     esac
 }
@@ -221,7 +222,7 @@ cmd_remove() {
                 dir=$(new_removed_dir); cp -p -- "$cfg" "$dir/Config.wtf"
                 local tmp; tmp=$(mktemp "$cfg.XXXXXX")
                 # drop only our line, keep the file's own line endings
-                grep -vxF -e "$tex_line" -e "$tex_line"$'\r' "$cfg" >"$tmp" || true
+                grep -vxF -e "$tex_line" -e "$tex_line"$'\r' -e "$tex_line_old" -e "$tex_line_old"$'\r' "$cfg" >"$tmp" || true
                 cat -- "$tmp" >"$cfg"; rm -f -- "$tmp"
                 printf 'Removed the componentTextureLevel line from WTF/Config.wtf (copy of the old file: %s/Config.wtf).\n' "$dir"
             else
@@ -281,7 +282,7 @@ cmd_restore() {
             local eol=$'\n'; grep -q $'\r' "$cfg" && eol=$'\r\n'
             [[ -s $cfg && $(tail -c1 "$cfg" | od -An -c | tr -d ' ') != '\n' ]] && printf '%s' "$eol" >>"$cfg"
             printf '%s%s' "$tex_line" "$eol" >>"$cfg"; : >"$state_dir/texture-level-set"
-            printf 'Set componentTextureLevel 9 again.\n' ;;
+            printf 'Set componentTextureLevel 10 again.\n' ;;
     esac
 }
 

@@ -68,12 +68,14 @@ can add the pieces below. Each one can be taken out again, and **nothing is ever
 | RealmDesk tickets | `Interface/AddOns/RealmDesk`. Does nothing unless the realm has its server side on | Yes, on every install and update unless you opted out | launcher *Extras* tab, or `--no-realmdesk` |
 | Body Shape sliders | `Interface/AddOns/WowDecompBodyShape` (type `/bs` in game). Your slider settings are saved per character in `WTF`, not in the addon | Yes, on every install and update unless you opted out | launcher *Extras* tab, or `--no-bodyshape` |
 | NetherBot Click Guard | `Interface/AddOns/NetherBotClickGuard` (`/nbcg` in game). Right-clicks pass straight through your NPCBots; hold the modifier key (Shift by default) to click one. Settings live in `WTF` | Yes, on every install and update unless you opted out (an older 1.1 copied in by hand is replaced; originals kept in `FTA-Linux/clickguard-backup/`) | launcher *Extras* tab, or `--no-clickguard` |
+| DrakeishUI interface | `Interface/AddOns/DrakeishUI` (55 MB separate download, 217 MB installed): the modern action bars, bags, character window, talents and map. It is the default interface: while it is selected ElvUI and Tukui stay off at login (no files are changed), and *Interface > Game > Interface style* switches back. Your settings live in `WTF` | Downloaded on a new install; an update leaves an installed copy alone, and `--drakeish` fetches the current one (replaced files are kept in `FTA-Linux/drakeish-backup/`) | launcher *Extras* tab, or `--no-drakeish` |
+| Flamestrike fix | `Data/patch-Z9.mpq` and `Data/patch-ZY.mpq` (together under 1 MB; the second is a whole spell table) | Yes, on every install and update unless you opted out | launcher *Extras* tab, or `--no-flamestrike` |
 | Addon fixes | A few addon files (listed before they change, originals kept in `FTA-Linux/addon-fix-backup/`). Shared with the Windows client in the same folder | Asked first; an update only re-applies them if you accepted before | launcher *Extras* tab, or `--no-fixes` |
-| Sharper character skins | One line in `WTF/Config.wtf` (`componentTextureLevel 9`, a copy of the old file is kept) | Yes, once, unless you opted out | launcher *Extras* tab, or `--no-texture-level` |
+| Sharper character skins | One line in `WTF/Config.wtf` (`componentTextureLevel 10`, 1024x1024 character skins; a copy of the old file is kept) | Yes, once, unless you opted out | launcher *Extras* tab, or `--no-texture-level` |
 | Login screens | `Data/LoginScreens/` (207 MB, separate download) and a link `Data/patch-ZZ.mpq` | No: asked, default no | the launcher's *Login* tab (*Default*) |
 
 The same switches work from a terminal: `FTA-Linux/optional.sh list`, `FTA-Linux/optional.sh remove murloc`
-(or `realmdesk`, `bodyshape`, `clickguard`, `fixes`, `texture`) and `FTA-Linux/optional.sh restore murloc`. To put back a piece that was never installed or
+(or `realmdesk`, `bodyshape`, `clickguard`, `modelfix`, `drakeish`, `flamestrike`, `fixes`, `texture`) and `FTA-Linux/optional.sh restore murloc`. To put back a piece that was never installed or
 was left out at install time, run the installer again with `--murloc`, `--realmdesk`, `--bodyshape`, `--clickguard`, and so on.
 
 ### The launcher (Realmgate)
@@ -197,7 +199,7 @@ The launcher's Settings tab edits the same file for you.
 |---|---|
 | `WXL_MODERN_ASSETS` | Convert modern M2/BLP/WMO assets at load |
 | `WXL_COLLECTION_ARMOR` | Collection armor models |
-| `WXL_VISUAL_ENVIRONMENT`, `WXL_MODERN_WATER`, `WXL_GOD_RAYS`, `WXL_LOCAL_LIGHTS` | Water, atmosphere and lighting |
+| `WXL_VISUAL_ENVIRONMENT`, `WXL_FORWARD_SCATTERING`, `WXL_DISTANCE_HAZE` | Atmosphere and lighting. Water, fog, mist, light shafts and lamp lighting are set in game, in the Atmosphere page of the options |
 | `WXL_GRASS_MOTION` | Grass sway and parting around the player |
 | `WXL_SURFACE_LIGHTS` | Torches and lamps light terrain, models and buildings (off unless set to `1`) |
 | `WXL_QUEST_RENDERING`, `WXL_UNIT_OVERLAYS` | Quest markers and objective rings; target outline and danger guides (off) |
@@ -228,7 +230,7 @@ The launcher's Settings tab edits the same file for you.
 
 Run `FTA-Linux/uninstall.sh` in a terminal (`--dry-run` shows what it would do, `--yes` skips the question,
 `--purge-settings` also removes the launcher's saved choices). It removes `Wow64`, the `FTA-Linux` folder and the menu
-shortcut, and moves the Murloc patch, RealmDesk, Body Shape, the login screens and the texture line out of your client; your original
+shortcut, and moves the Murloc patch, RealmDesk, Body Shape, DrakeishUI, the login screens and the texture line out of your client; your original
 addon files come back from the backups. What it moves waits in `FTA-Linux-removed-<date-time>/` next to `Wow.exe`
 (delete that folder when you are sure, or pass `--delete`). It does not touch `WTF` (your settings and saved variables),
 the Windows client, or the offline shader packs in `Utils/WarcraftXL/visuals/`, which are harmless to keep.
