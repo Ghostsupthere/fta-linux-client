@@ -271,8 +271,8 @@ pub fn run(client: Option<&Path>, launcher_version: &str, update_note: &str) -> 
 
     let lamps = client.join("Utils/WarcraftXL/visuals/lamp_models.csv");
     if lamps.is_file() {
-        let n = std::fs::read_to_string(&lamps).map(|t| t.lines().filter(|l| !l.trim().is_empty() && !l.starts_with('#')).count().saturating_sub(1)).unwrap_or(0);
-        checks.push(check(Level::Ok, "Lamp catalog", format!("{n} models")));
+        let n = std::fs::read_to_string(&lamps).map(|t| t.lines().filter(|l| !l.trim().is_empty() && !l.starts_with('#')).count()).unwrap_or(0);
+        checks.push(check(Level::Ok, "Lamp catalog", format!("{n} lamp entries")));
     } else {
         checks.push(check(Level::Warn, "Lamp catalog", "lamp_models.csv is missing (static lamps and torches stay off)"));
     }
