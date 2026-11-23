@@ -53,8 +53,8 @@ DRAKEISHUI_ID=''
 
 # The Murloc race patch (patch-ZD.mpq, about 12 MB: the custom playable Murloc race of the From The Ashes realm) is a separate download too,
 # because it carries game models and textures. The file must match this checksum or nothing is installed from it.
-MURLOC_PATCH_URL='https://drive.google.com/file/d/1r84grn0yiBx3A063Vl-5wrkK9rwi2gm0/view?usp=sharing'
-MURLOC_PATCH_ID=1r84grn0yiBx3A063Vl-5wrkK9rwi2gm0
+MURLOC_PATCH_URL='https://drive.google.com/file/d/1gmfPS-RJY1CHYbY8X20Ov20Ug6_nRbuX/view?usp=sharing'
+MURLOC_PATCH_ID=1gmfPS-RJY1CHYbY8X20Ov20Ug6_nRbuX
 MURLOC_PATCH_SHA256=df580c5ef1afaa8f31e6c962b0490e04ad8c940e3f6818c6cf9adb51d2fbb156
 
 self=$(readlink -f -- "$0")
