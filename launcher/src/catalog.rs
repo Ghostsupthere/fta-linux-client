@@ -52,7 +52,7 @@ const DEBUG_CATEGORY: &str = "DEBUGGING (takes effect at the next game start; lo
 
 pub const SETTINGS: &[Setting] = &[
     // ---- Visuals ----
-    s("WXL_VISUAL_ENVIRONMENT", Cfg, "VISUALS", "Modern visual environment", "Master switch for the modern water, atmosphere and lighting renderer. Fog, water, shafts, mist, lamps and the rest are adjusted in game: Video options > Effects > Visuals & Guidance (tick Use these settings)", true),
+    s("WXL_VISUAL_ENVIRONMENT", Cfg, "VISUALS", "Modern visual environment", "Master switch for modern water, fog and lighting. The rest is set in game: Video options > Effects", true),
     s("WXL_VISUAL_MULTISAMPLING", Cfg, "VISUALS", "Multisampling for modern visuals", "Smoother edges on the modern effects; costs some performance", true),
     s("WXL_DISTANCE_HAZE", Cfg, "VISUALS", "Distance haze", "A soft haze on far terrain", true),
     s("WXL_FORWARD_SCATTERING", Cfg, "VISUALS", "Light scattering", "Glow around the sun and bright lights in fog", true),
@@ -77,9 +77,9 @@ pub const SETTINGS: &[Setting] = &[
     s("WXL_PARTICLE_THREADS", Cfg, "PERFORMANCE", "Threaded particle updates", "Update particle effects on worker threads", true),
     s("WXL_PARTICLE_BUILD_THREADS", Cfg, "PERFORMANCE", "Prebuilt particle geometry", "Build particle geometry ahead of drawing on worker threads", true),
     s("M2UseThreads", Wtf, "PERFORMANCE", "Multi-core model animation", "Animate models on several CPU threads (game setting)", true),
-    Setting { key: "WXL_COMPOSITOR_1024", store: Store::Env, category: "PERFORMANCE", label: "1024 character skins", hint: "Character skins are composed at 1024 pixels when the game's component texture level is 10. Switch off to fall back to 512 if faces or skins look wrong or video memory is tight", default: true, on: "1", off: "0" },
-    Setting { key: "WXL_TERRAIN_AREA_REPLAY", store: Store::Env, category: "PERFORMANCE", label: "Faster terrain drawing", hint: "Reuses the terrain draw list while the view has not changed. Switch off only to compare or if terrain flickers", default: true, on: "1", off: "0" },
-    Setting { key: "WXL_M2_KEYED_SORT", store: Store::Env, category: "PERFORMANCE", label: "Sorted model drawing", hint: "Draws opaque models in an order that saves state changes. Switch off only to compare or if models draw in the wrong order", default: true, on: "1", off: "0" },
+    Setting { key: "WXL_COMPOSITOR_1024", store: Store::Env, category: "PERFORMANCE", label: "1024 character skins", hint: "Composes character skins at 1024 pixels. Switch off to use 512 if faces look wrong", default: true, on: "1", off: "0" },
+    Setting { key: "WXL_TERRAIN_AREA_REPLAY", store: Store::Env, category: "PERFORMANCE", label: "Faster terrain drawing", hint: "Reuses the terrain draw list while the view is unchanged. Switch off only to compare", default: true, on: "1", off: "0" },
+    Setting { key: "WXL_M2_KEYED_SORT", store: Store::Env, category: "PERFORMANCE", label: "Sorted model drawing", hint: "Draws opaque models in a cheaper order. Switch off only to compare", default: true, on: "1", off: "0" },
     s("weatherRainCap", Wtf, "PERFORMANCE", "Lighter rain", "Fewer rain drops and no distant splashes (game setting)", false),
     s("doodadFadeRebalance", Wtf, "PERFORMANCE", "Sooner fade of small objects", "Shrubs, small trees and flowers fade out nearer (game setting)", false),
     s("shadowCasterMinRadiusFilter", Wtf, "PERFORMANCE", "No shadows from small props", "Cups, bottles and small rocks stop casting shadows (game setting)", false),
@@ -89,19 +89,19 @@ pub const SETTINGS: &[Setting] = &[
     s("scriptErrors", Wtf, DEBUG_CATEGORY, "Show Lua errors", "Addon errors pop up in the game instead of staying silent (game setting)", false),
     s("scriptProfile", Wtf, DEBUG_CATEGORY, "Addon CPU profiling", "Lets addons measure their own CPU use; slows the UI a little (game setting)", false),
     dbg("WXL_NATIVE_DIAGNOSTICS", "Asset and equipment trace", "Logs model, texture and equipment path decisions to the launch log", "1", "0"),
-    dbg("FTA_TRACE_JUMP", "Jump and root trace", "For \"cannot jump after a root or stun\": logs every refused jump with the movement flags that blocked it, and every root and unroot the game applies, to the launch log", "1", "0"),
+    dbg("FTA_TRACE_JUMP", "Jump and root trace", "Logs refused jumps and every root and unroot with the flags involved (for \"cannot jump after a root or stun\")", "1", "0"),
     dbg("WXL_PROFILE_LOG", "Profiler summary every 5 seconds", "Logs frame time and timings per zone (water, particles, weather, ...) to the launch log", "5", "0"),
-    dbg("WXL_PROFILE_GPU", "GPU time per pass", "Adds the GPU time of the main render passes to the profiler summary (needs the profiler summary above). Costs a little speed", "1", "0"),
-    dbg("WXL_PROFILE_UI_DETAIL", "Interface time breakdown", "Splits the profiler's interface time by callback and addon update (needs the profiler summary above)", "1", "0"),
-    dbg("WXL_PROFILE_M2_DRAWS", "Model draw breakdown", "Counts model draws by type and how many were merged (needs the profiler summary above)", "1", "0"),
-    dbg("WXL_SOFT_PARTICLE_TIMING", "Soft particle timing", "Logs the GPU time of the soft particle depth step to Logs/VisualEnvironment.log (only when Soft particles are on in game)", "1", "0"),
+    dbg("WXL_PROFILE_GPU", "GPU time per pass", "Adds GPU time per render pass to the profiler summary (needs that switch on)", "1", "0"),
+    dbg("WXL_PROFILE_UI_DETAIL", "Interface time breakdown", "Splits the profiler's interface time by callback (needs the profiler summary)", "1", "0"),
+    dbg("WXL_PROFILE_M2_DRAWS", "Model draw breakdown", "Counts model draws by type and merges (needs the profiler summary)", "1", "0"),
+    dbg("WXL_SOFT_PARTICLE_TIMING", "Soft particle timing", "Logs the soft particle depth step's GPU time to Logs/VisualEnvironment.log", "1", "0"),
     dbg("WXL_VERBOSE_ASSET_LOGS", "Per-asset transform log (developers)", "Logs how every modern model and texture is converted at load. Very long", "1", "0"),
     dbg("WXL_FOG_TRACE", "Fog and light pass trace", "Logs the state of the fog and light passes every 300 frames", "1", "0"),
     dbg("FTA_TRACE_PORTRAIT", "Portrait camera trace", "Logs how character portrait and preview cameras are set up", "1", "0"),
     dbg("FTA_TRACE_UNINVITE", "Party-error trace", "Logs where \"is not in your party\" errors come from", "1", "0"),
     dbg("WXL_SAMPLE_PROFILE", "Call-stack sampling (developers)", "500 samples a second; kill -USR1 on the game writes Logs/samples.txt. Can slow or hang the game", "500", "0"),
-    dbg("WXL_HEAP_CHECK", "Heap checker (developers)", "Guards every allocation and logs overflows and use-after-free with the call site (WXL_HEAP_CHECK lines in the launch log). Slows the game and uses more memory", "1", "0"),
-    dbg("WXL_SHADOW_MIN_INFLUENCES", "Old shadow shader choice (comparison)", "Brings back the stock shadow selection, so shields cast a wrong shadow again. Only to compare", "0", "1"),
+    dbg("WXL_HEAP_CHECK", "Heap checker (developers)", "Guards every allocation and logs overflows and use-after-free with the call site. Slows the game", "1", "0"),
+    dbg("WXL_SHADOW_MIN_INFLUENCES", "Old shadow shader (comparison)", "Brings back the stock shadow selection, so shields cast a wrong shadow again. Only to compare", "0", "1"),
 ];
 
 pub struct Preset {
