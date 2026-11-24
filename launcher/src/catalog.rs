@@ -91,6 +91,7 @@ pub const SETTINGS: &[Setting] = &[
     dbg("WXL_NATIVE_DIAGNOSTICS", "Asset and equipment trace", "Logs model, texture and equipment path decisions to the launch log", "1", "0"),
     dbg("FTA_TRACE_JUMP", "Jump and root trace", "Logs refused jumps and every root and unroot with the flags involved (for \"cannot jump after a root or stun\")", "1", "0"),
     dbg("WXL_PROFILE_LOG", "Profiler summary every 5 seconds", "Logs frame time and timings per zone (water, particles, weather, ...) to the launch log", "5", "0"),
+    dbg("WXL_PROFILE_SPIKES", "Slow-frame (hitch) log", "Logs frames much slower than usual and what took the time (launch log: frame spike)", "1", "0"),
     dbg("WXL_PROFILE_GPU", "GPU time per pass", "Adds GPU time per render pass to the profiler summary (needs that switch on)", "1", "0"),
     dbg("WXL_PROFILE_UI_DETAIL", "Interface time breakdown", "Splits the profiler's interface time by callback (needs the profiler summary)", "1", "0"),
     dbg("WXL_PROFILE_M2_DRAWS", "Model draw breakdown", "Counts model draws by type and merges (needs the profiler summary)", "1", "0"),
