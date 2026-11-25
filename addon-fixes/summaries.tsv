@@ -17,3 +17,6 @@ Interface/AddOns/Blizzard_MacroUI/Blizzard_MacroUI.lua	Macro window (new file): 
 Interface/AddOns/Blizzard_MacroUI/Blizzard_MacroUI.xml	Macro window (new file): layout for the above
 Interface/AddOns/Blizzard_MacroUI/FTA_MacroEditor.lua	Macro window (new file): expanded editor with Undo/Redo, syntax preview, Check, Complete, Duplicate, Find/Replace
 Interface/AddOns/AllStats/AllStats.lua	AllStats: with DrakeishUI the stat list and Stats-> button stay hidden and the notes panel moves to the character window edge
+Interface/AddOns/PallyPower/PallyPower.lua	PallyPower: individual blessing assignments work for players whose names have spaces
+Interface/AddOns/AzerCoreOps/AzerCoreOpsOperations.lua	AzerCoreOps: GM commands on a character whose name has spaces (sent as a player link)
+Interface/AddOns/AzerCoreOps/DeathActions.lua	AzerCoreOps: GM self-revive for a character whose name has spaces

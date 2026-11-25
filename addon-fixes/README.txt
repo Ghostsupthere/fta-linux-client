@@ -161,6 +161,22 @@ Close the game before copying.
    nothing changes.
    Status: confirmed in play with DrakeishUI.
 
+18. PallyPower, PallyPower.lua: blessings assigned to a player whose name has spaces
+   Symptom: with characters that have several-word names, an individual blessing assignment (a paladin given one
+   specific player) arrived as the wrong names and was dropped or stored under a wrong player.
+   Cause: the receiver split each "paladin class player skill" entry on spaces, which cannot work when a name has spaces.
+   Fix: the receiver reads the two numbers (class, skill) and takes everything between them as the names. Entries with
+   one-word names are read exactly as before.
+   Status: parser checked against the old one with sample entries; not seen in play.
+
+19. AzerCoreOps, AzerCoreOpsOperations.lua and DeathActions.lua: GM commands on a character whose name has spaces
+   Symptom: Revive, Recall, Kick, Player info, Freeze, Unfreeze, Customize, Rename, Change faction/race and the GM
+   self-revive answered with "no detailed usage information" for such a character.
+   Cause: the server reads a player argument as one word.
+   Fix: a name with spaces is sent as a player link, which the server reads as one argument. One-word names are sent
+   as before.
+   Status: not tested; needs a GM account on the live server.
+
 Credit: the Questie map-icon fixes (items 4b and 4c, 5, 6 and 7) are by Grandpa_Boris.
 
 Install
