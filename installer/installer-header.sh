@@ -47,7 +47,7 @@ LOGIN_SCREENS_SHA256=a03c6881b1ece9525020972ffbcc3f510f6b9d58c94a166b800f0d13179
 
 # DrakeishUI (the default interface, FTA-DrakeishUI.zip, 55 MB) is a separate download too, so it can be updated without a new release. It is kept on Google
 # Drive; the file carries its own SelectivePackageManifest.json (size and sha256 of every file) and nothing is installed unless every file matches it.
-# Replace the file on Drive (same link, "Manage versions") to update it; players get the new files with the installer's --drakeish.
+# Replace the file on Drive (same link, "Manage versions") to update it; players get the new files with every update (the installer downloads it again and replaces only the files that differ).
 DRAKEISHUI_URL='https://drive.google.com/file/d/1U-9MGatVyDBFxtAgFuWdgnhb7OYIM1VB/view?usp=sharing'
 DRAKEISHUI_ID=1U-9MGatVyDBFxtAgFuWdgnhb7OYIM1VB
 
@@ -563,8 +563,8 @@ unpack_zip() { # unpack_zip ZIP DIR: unzip, python3 or bsdtar, whichever is inst
 # DrakeishUI is the modern interface (action bars, bags, character window, talents, map ...) and the default one of this client. It is a separate download
 # (FTA-DrakeishUI.zip, 55 MB, Google Drive, see DRAKEISHUI_ID above) or a local zip given with --drakeish-file, and is copied to Interface/AddOns/DrakeishUI. A copy
 # bundled in this installer as FTA-Addons/DrakeishUI is used instead when there is one. It is load-on-demand: the game loads it at login when "Interface style" is
-# DrakeishUI (Interface > Game). Its saved variables live in WTF. A new install downloads it; an update leaves an installed copy alone (it is maintained separately),
-# and --drakeish fetches the current one and replaces only the files that differ, each first kept in FTA-Linux/drakeish-backup/. --no-drakeish skips it and is remembered
+# DrakeishUI (Interface > Game). Its saved variables live in WTF. A new install downloads it; every update (the launcher's Update button, or running this installer again) fetches the current one too and replaces only
+# the files that differ, each first kept in FTA-Linux/drakeish-backup/. --no-drakeish skips it and is remembered
 # (FTA-Linux/no-drakeish) so later updates leave it out. The game only finds files that exist when it starts, so it has to be restarted after this step.
 drakeish_manual() {
     printf 'To add it by hand: download %s\nand extract it inside %s/Interface/AddOns, so the files are in Interface/AddOns/DrakeishUI. Or run this installer with --drakeish-file FTA-DrakeishUI.zip.\n' "${DRAKEISHUI_URL:-FTA-DrakeishUI.zip (the link is in the download notes)}" "$client"
@@ -594,15 +594,13 @@ drakeish_install() {
     if [[ -f $tmp/FTA-Addons/DrakeishUI/DrakeishUI.toc ]]; then
         src=$tmp/FTA-Addons/DrakeishUI
     else
-        if [[ -f $dest/DrakeishUI.toc && $drakeish != yes ]]; then
-            printf '\nDrakeishUI: installed; an update leaves it alone (it is updated separately). Run the installer with --drakeish to fetch the current one.\n'; return 0
-        fi
         printf '\nDrakeishUI: the modern interface (action bars, bags, character window, talents, map), the default of this client.\n'
-        printf 'It is a separate download of 55 MB (217 MB installed) and goes into Interface/AddOns/DrakeishUI. Without it the game keeps the stock interface or ElvUI.\n'
+        if [[ -f $dest/DrakeishUI.toc ]]; then printf 'Installed; fetching the current version (55 MB) and replacing only the files that differ.\n'
+        else printf 'It is a separate download of 55 MB (217 MB installed) and goes into Interface/AddOns/DrakeishUI. Without it the game keeps the stock interface or ElvUI.\n'; fi
         if [[ -z $drakeish_file && -z $DRAKEISHUI_ID ]]; then
             printf 'This installer has no download link for it yet.\n'; drakeish_manual; return 0
         fi
-        if [[ $drakeish != yes ]] && ! (( update )) && ! ask 'Download and install it now?' Y; then
+        if [[ $drakeish != yes ]] && ! (( update )) && [[ ! -f $dest/DrakeishUI.toc ]] && ! ask 'Download and install it now?' Y; then
             printf 'Skipped. Run the installer with --drakeish to add it later.\n'; return 0
         fi
         dl=$(mktemp -d -p "$client/Data" .fta-drakeish-download.XXXXXX) || { printf 'Cannot write to %s/Data.\n' "$client"; return 0; }
